@@ -136,7 +136,7 @@ html.dark .sidebar{background:#070D17;}
   color:#B7C6D6;font-size:14px;font-weight:500;
   border:none;background:none;text-align:left;width:100%;
   transition:background .15s ease, color .15s ease;
-  position:relative;
+  position:relative;text-decoration:none;cursor:pointer;box-sizing:border-box;
 }
 .nav-item svg{flex:0 0 auto;opacity:.85;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
@@ -511,16 +511,6 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
 /* ---------- Painel de Status de Entregas ---------- */
 .status-pdf-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
 
-/* ---------- Farol de Vendas (embutido via iframe) ---------- */
-.farol-frame-wrap{
-  width:100%;height:calc(100vh - 220px);min-height:420px;border-radius:var(--radius-lg);overflow:hidden;
-  border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow-sm);
-}
-#farolIframe{width:100%;height:100%;border:0;display:block;}
-@media (max-width:860px){
-  .farol-frame-wrap{height:calc(100vh - 260px);min-height:360px;}
-}
-
 .status-pdf-card{
   display:flex;align-items:center;gap:12px;padding:18px;border-radius:var(--radius-lg);border:1px solid var(--line);
   background:var(--surface);box-shadow:var(--shadow-sm);text-align:left;transition:.15s;cursor:pointer;
@@ -813,7 +803,7 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
       <button class="nav-item" data-view="redes"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="2.6" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="6" r="2.6" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="18" r="2.6" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 7.2 10.5 16M15.8 7.2 13.5 16M8.6 6h6.8" stroke="currentColor" stroke-width="1.7"/></svg>Redes<span class="cnt" id="cntRedes">0</span></button>
       <button class="nav-item" data-view="veiculos"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 16V6a1 1 0 0 1 1-1h9v11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M13 9h4l4 4v3h-8V9Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.6" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="17" r="1.6" stroke="currentColor" stroke-width="1.7"/></svg>Veículos<span class="cnt" id="cntVeiculos">0</span></button>
       <button class="nav-item" data-view="status"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 11.5 11 13.5 15.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/></svg>Status de Entregas</button>
-      <button class="nav-item" data-view="farol"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.7"/></svg>Farol de Vendas</button>
+      <a class="nav-item" href="https://portalgtf.github.io/Farol-de-Vendas/"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.7"/></svg>Farol de Vendas</a>
 
       <div class="filters-wrap" id="filtersWrap">
         <div class="filters-head"><span>Filtros</span><button id="clearFiltersBtn">Limpar</button></div>
@@ -1057,22 +1047,6 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
         <div class="panel">
           <div class="panel-head"><div><h3>Evolução por veículo</h3><div class="sub">Percentual de entregas concluídas e cidades que compõem a carga de cada placa</div></div></div>
           <div class="panel-body"><div id="veiculoEvolucaoList" class="veic-evo-list"></div></div>
-        </div>
-      </section>
-
-      <!-- ===================== FAROL DE VENDAS (embutido) ===================== -->
-      <section class="view" id="view-farol">
-        <div class="view-head">
-          <div><h1>Farol de Vendas</h1><p>Painel do Mercado Interno, direto aqui dentro do portal.</p></div>
-          <div class="view-actions">
-            <a class="btn" id="farolOpenExternalBtn" href="https://portalgtf.github.io/Farol-de-Vendas/" target="_blank" rel="noopener">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 4h6v6M20 4 10 14M6 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              Abrir em nova aba
-            </a>
-          </div>
-        </div>
-        <div class="farol-frame-wrap">
-          <iframe id="farolIframe" src="about:blank" data-src="https://portalgtf.github.io/Farol-de-Vendas/" title="Farol de Vendas" loading="lazy"></iframe>
         </div>
       </section>
 
@@ -2503,7 +2477,7 @@ $('#btnPdfRealizado').addEventListener('click', ()=> exportStatusPdf('REALIZADO'
 $('#btnPdfPendente').addEventListener('click', ()=> exportStatusPdf('PENDENTE'));
 
 /* ---------------- 15) Navegação de views ---------------- */
-const VIEW_LABELS = {visao:'Visão geral', entregas:'Cargas na rua', vendedores:'Vendedores', logistica:'Logística', redes:'Redes', veiculos:'Veículos', status:'Status de Entregas', farol:'Farol de Vendas'};
+const VIEW_LABELS = {visao:'Visão geral', entregas:'Cargas na rua', vendedores:'Vendedores', logistica:'Logística', redes:'Redes', veiculos:'Veículos', status:'Status de Entregas'};
 function setView(v, opts={}){
   if(!opts.keepBackContext) state.cameFromView = null;
   state.view = v; state.page=1;
@@ -2511,10 +2485,6 @@ function setView(v, opts={}){
   $$('.bn-item[data-view]').forEach(b=> b.classList.toggle('active', b.dataset.view===v));
   $$('.view').forEach(sec=> sec.classList.toggle('active', sec.id==='view-'+v));
   const lbl = $('#mobileViewLabel'); if(lbl) lbl.textContent = VIEW_LABELS[v] || '';
-  if(v==='farol'){
-    const frame = $('#farolIframe');
-    if(frame && frame.src==='about:blank') frame.src = frame.dataset.src;
-  }
   closeSidebarMobile();
   render();
 }
