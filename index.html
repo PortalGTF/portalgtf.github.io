@@ -1170,6 +1170,13 @@ let adminSenha = null;
 try{ adminSenha = sessionStorage.getItem('portalAdminSenha'); }catch(e){ /* sessionStorage indisponível */ }
 function isAdminMode(){ return !!adminSenha; }
 
+// Mesmo motivo: a tabela/cards já tentam mostrar o WhatsApp do vendedor na
+// primeira renderização, então isso precisa existir antes disso também.
+let VENDEDORES_INFO = {};
+let OCORRENCIA_CC = [];
+let _vendedorMatchCache = {};
+const VENDEDOR_MATCH_THRESHOLD = 0.70; // pelo menos 70% de semelhança pra aceitar como o mesmo vendedor
+
 /* ---------------- 3) Popular selects de filtro ---------------- */
 function uniq(arr, key){ return Array.from(new Set(arr.map(e=>e[key]).filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR')); }
 function clearSelectOptions(id){
@@ -1592,7 +1599,7 @@ function buildDeliveryCard(e){
         <div style="margin-left:auto;">${entregaBadge(e.STATUS_ENTREGA)}</div>
       </div>
       <div class="dc-cliente">
-        <div class="dc-vendedor">${e.NOME_VENDEDOR}</div>
+        <div class="dc-vendedor">${e.NOME_VENDEDOR}${vendedorWaBtn(e.NOME_VENDEDOR)}</div>
         <div class="dc-cliente-name">${e.DS_CLIENTE}</div>
         <div class="dc-cliente-code">Código do cliente: ${e.CD_CLIENTE}${e.REDE?(' · Rede: '+e.REDE):''}</div>
       </div>
@@ -1729,7 +1736,7 @@ function renderTable(list){
         <td>${entregaBadge(e.STATUS_ENTREGA)}</td>
         <td class="mono">${e.NR_NF}</td>
         <td class="mono">${e.NR_ROMANEIO}</td>
-        <td><div class="cell-multi"><span class="l0">${e.NOME_VENDEDOR}</span><span class="l1">${e.DS_CLIENTE}</span><span class="l2">Cód: ${e.CD_CLIENTE}${e.REDE?(' · '+e.REDE):''}</span></div></td>
+        <td><div class="cell-multi"><span class="l0">${e.NOME_VENDEDOR}${vendedorWaBtn(e.NOME_VENDEDOR)}</span><span class="l1">${e.DS_CLIENTE}</span><span class="l2">Cód: ${e.CD_CLIENTE}${e.REDE?(' · '+e.REDE):''}</span></div></td>
         <td style="white-space:normal;max-width:230px;"><div class="cell-multi"><span class="l1" style="font-weight:500;">${e.CLIENTE_END||'—'}</span><span class="l2">${e.CIDADE} / ${e.UF}</span></div></td>
         <td><div class="cell-multi"><span class="l1">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</span><span class="l2">${e.DS_TRANSP}</span></div></td>
         <td><div class="cell-multi"><span class="l1 mono">${e.PLACA}</span><span class="l2">${e.TP_VEICULO}</span></div></td>
@@ -1862,6 +1869,7 @@ function openTimeline(nf){
       <div class="entrega-status-row">
         ${entregaBadge(e.STATUS_ENTREGA)}
         <button type="button" class="btn btn-sm" id="shareCardBtn" onclick="shareCardImage('${e.NR_NF}')">📤 Compartilhar</button>
+        <button type="button" class="btn btn-sm" id="ocorrenciaBtn" onclick="abrirOcorrenciaEmail('${e.NR_NF}')">🚨 Abertura Oc.</button>
         ${isAdminMode()? `<button type="button" class="btn btn-sm ${e.STATUS_ENTREGA==='REALIZADO'?'':'btn-primary'}" onclick="marcarEntrega('${e.NR_NF}','${e.STATUS_ENTREGA==='REALIZADO'?'PENDENTE':'REALIZADO'}')">${e.STATUS_ENTREGA==='REALIZADO'? 'Desfazer, marcar como pendente' : '✓ Marcar como entregue'}</button>` : ''}
       </div>
     </div>
@@ -2130,13 +2138,13 @@ function renderVendedores(list){
   });
   const arr = Array.from(vend.entries()).sort((a,b)=>b[1].valor-a[1].valor);
   $('#vendedorGrid').innerHTML = arr.map(([name,v])=>`
-    <button class="entity-card ${state.vendedorSel===name?'active':''}" data-vend="${name}">
-      <div class="ename">${name}</div>
+    <div class="entity-card ${state.vendedorSel===name?'active':''}" data-vend="${escapeHtml(name)}" role="button" tabindex="0">
+      <div class="veic-top-row"><div class="ename">${name}</div>${vendedorWaBtn(name, true)}</div>
       <div class="estats">
         <div><b>${v.pedidos}</b>pedidos</div>
         <div><b>${v.clientes.size}</b>clientes</div>
       </div>
-    </button>`).join('');
+    </div>`).join('');
   $$('#vendedorGrid [data-vend]').forEach(b=> b.addEventListener('click', ()=>{
     state.vendedorSel = state.vendedorSel===b.dataset.vend? null : b.dataset.vend;
     state.page=1; render();
@@ -2145,7 +2153,7 @@ function renderVendedores(list){
   if(!state.vendedorSel){ det.innerHTML=''; return; }
   const meus = list.filter(e=>e.NOME_VENDEDOR===state.vendedorSel);
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
-    <div class="panel-head"><h3>Pedidos de ${state.vendedorSel}</h3><div class="sub">${meus.length} pedidos no filtro atual</div></div>
+    <div class="panel-head"><h3>Pedidos de ${state.vendedorSel}${vendedorWaBtn(state.vendedorSel, true)}</h3><div class="sub">${meus.length} pedidos no filtro atual</div></div>
     <div class="table-scroll"><table class="data-table" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Motorista/Transp.</th><th>Valor</th></tr></thead>
     <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;"><td class="mono">${e.PEDIDO}</td><td class="mono">${e.NR_NF}</td><td>${e.DS_CLIENTE}</td><td style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td>${e.CIDADE}/${e.UF}</td><td>${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
@@ -2689,6 +2697,16 @@ function cleanStr(v){
   const s = String(v).trim();
   return (s===''||s==='-')? null : s;
 }
+// Detecta quando o Google Sheets exportou um número em notação científica
+// (ex.: "2,42E+13") — nesses casos os dígitos do meio se perdem de verdade,
+// então mostramos um aviso em vez de um valor incompleto e errado.
+function cleanIdField(v){
+  const s = cleanStr(v);
+  if(s && /\de[+-]?\d+/i.test(s)){
+    return '⚠️ corrigir formato na planilha';
+  }
+  return s;
+}
 
 // Converte uma linha do CSV (objeto {cabecalho: valor}) para o formato usado por buildEntregas
 // Detecta a coluna de telefone do motorista mesmo que o nome exato varie
@@ -2708,9 +2726,9 @@ function mapCsvRowToRaw(o){
   return {
     FILIAL: cleanStr(o.FILIAL), NR_ROMANEIO: cleanStr(o.NR_ROMANEIO), NR_NF: cleanStr(o.NR_NF), PEDIDO: cleanStr(o.PEDIDO),
     CD_TRANSP: cleanStr(o.CD_TRANSP), DS_TRANSP: cleanStr(o.DS_TRANSP), DS_MOTORISTA: cleanStr(o.DS_MOTORISTA),
-    TP_VEICULO: cleanStr(o.TP_VEICULO), PLACA: cleanStr(o.PLACA), CD_CLIENTE: cleanStr(o.CD_CLIENTE), DS_CLIENTE: cleanStr(o.DS_CLIENTE),
+    TP_VEICULO: cleanStr(o.TP_VEICULO), PLACA: cleanStr(o.PLACA), CD_CLIENTE: cleanIdField(o.CD_CLIENTE), DS_CLIENTE: cleanStr(o.DS_CLIENTE),
     TELEFONE_MOTORISTA: cleanStr(findPhoneField(o)),
-    CNPJ: cleanStr(o.CNPJ), CLIENTE_END: cleanStr(o.CLIENTE_END), CIDADE: cleanStr(o.CIDADE), UF: cleanStr(o.UF),
+    CNPJ: cleanIdField(o.CNPJ), CLIENTE_END: cleanStr(o.CLIENTE_END), CIDADE: cleanStr(o.CIDADE), UF: cleanStr(o.UF),
     CIF_FOB: cleanStr(o.CIF_FOB), DT_EMISSAO_NF: parseFlexibleDate(o.DT_EMISSAO_NF), DT_FORMACAO: parseFlexibleDate(o.DT_FORMACAO),
     VALOR_NF: parseFlexibleNumber(o.VALOR_NF), NOME_VENDEDOR: cleanStr(o.NOME_VENDEDOR), ARMAZEM: cleanStr(o.ARMAZEM),
     COND_PGTO_CLIENTE: cleanStr(o.COND_PGTO_CLIENTE), OBSERVACAO_PEDIDO: cleanStr(o.OBSERVACAO_PEDIDO),
@@ -2782,6 +2800,127 @@ setInterval(()=> syncFromGoogleSheets(false), SYNC_INTERVAL_MS);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncFromGoogleSheets(false); });
 // Primeira sincronização logo na abertura, sem bloquear a exibição dos dados já embutidos
 syncFromGoogleSheets(false);
+
+/* ============================================================
+   DADOS DOS VENDEDORES (Página2) — e-mail, telefone e lista de CC
+   ============================================================
+   Aba separada da mesma planilha, publicada em CSV à parte.
+   Usada pro botão de WhatsApp do vendedor e pro e-mail de
+   abertura de ocorrência (Para: e-mail do vendedor / CC: coluna F).
+   ============================================================ */
+const GSHEET_VENDEDORES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQaQhOI_pO9ZLZCFjydiCa2l1tjZP9ImG6fYpX_9AwidKIsqk7OihgoGWdP3KyxHnHs-jf0uuLBE32/pub?gid=1668099572&single=true&output=csv';
+
+function normVendedorName(s){
+  return String(s||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+async function syncVendedoresInfo(){
+  try{
+    const resp = await fetch(GSHEET_VENDEDORES_CSV_URL + (GSHEET_VENDEDORES_CSV_URL.includes('?')?'&':'?') + '_ts=' + Date.now(), {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    if(/^\s*<(!DOCTYPE|html)/i.test(text)) throw new Error('A Página2 não retornou CSV (verifique a publicação)');
+    const table = parseCSV(text);
+    if(table.length < 2) return;
+    const headers = table[0].map(h=>h.trim().toUpperCase());
+    const idxNome = headers.indexOf('NOME VENDEDOR');
+    const idxEmail = headers.indexOf('E-MAIL');
+    const idxTel = headers.indexOf('TELEFONE');
+    const idxCc = headers.indexOf('CC');
+    if(idxNome===-1 || idxEmail===-1){ console.error('Página2: colunas NOME VENDEDOR / E-MAIL não encontradas'); return; }
+    const info = {};
+    const ccSet = new Set();
+    table.slice(1).forEach(row=>{
+      const nome = cleanStr(row[idxNome]);
+      if(nome){
+        info[normVendedorName(nome)] = { nome, email: cleanStr(row[idxEmail]), telefone: idxTel>-1? cleanStr(row[idxTel]) : null };
+      }
+      if(idxCc>-1){
+        const cc = cleanStr(row[idxCc]);
+        if(cc) ccSet.add(cc);
+      }
+    });
+    VENDEDORES_INFO = info;
+    _vendedorMatchCache = {};
+    OCORRENCIA_CC = Array.from(ccSet);
+    render();
+  }catch(err){
+    console.error('Falha ao sincronizar dados dos vendedores (Página2):', err);
+  }
+}
+// Comparação aproximada de nomes (tolera erro de digitação, acento faltando, etc.)
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if(m===0) return n;
+  if(n===0) return m;
+  const dp = new Array(n+1);
+  for(let j=0;j<=n;j++) dp[j]=j;
+  for(let i=1;i<=m;i++){
+    let prev = dp[0];
+    dp[0] = i;
+    for(let j=1;j<=n;j++){
+      const temp = dp[j];
+      dp[j] = a[i-1]===b[j-1] ? prev : 1 + Math.min(prev, dp[j], dp[j-1]);
+      prev = temp;
+    }
+  }
+  return dp[n];
+}
+function nameSimilarity(a, b){
+  if(!a || !b) return 0;
+  const maxLen = Math.max(a.length, b.length);
+  return maxLen===0 ? 1 : 1 - levenshtein(a,b)/maxLen;
+}
+function getVendedorInfo(nomeVendedor){
+  const key = normVendedorName(nomeVendedor);
+  if(!key) return null;
+  if(VENDEDORES_INFO[key]) return VENDEDORES_INFO[key]; // combinação exata — caminho rápido, sem comparar nada
+  if(key in _vendedorMatchCache) return _vendedorMatchCache[key];
+  let best = null, bestScore = 0;
+  for(const k in VENDEDORES_INFO){
+    const score = nameSimilarity(key, k);
+    if(score > bestScore){ bestScore = score; best = VENDEDORES_INFO[k]; }
+  }
+  const result = bestScore >= VENDEDOR_MATCH_THRESHOLD ? best : null;
+  _vendedorMatchCache[key] = result;
+  return result;
+}
+function vendedorWaBtn(nomeVendedor, showLabel){
+  const info = getVendedorInfo(nomeVendedor);
+  if(!info || !info.telefone) return '';
+  return waBtn(info.telefone, nomeVendedor, showLabel);
+}
+
+syncVendedoresInfo();
+setInterval(syncVendedoresInfo, SYNC_INTERVAL_MS);
+
+/* ============================================================
+   ABERTURA DE OCORRÊNCIA POR E-MAIL
+   ============================================================ */
+function ocorrenciaGreeting(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Bom dia a todos,';
+  if(h < 18) return 'Boa tarde a todos,';
+  return 'Boa noite a todos,';
+}
+function ocorrenciaEmailBody(e){
+  return `${ocorrenciaGreeting()}\nSegue abaixo os dados da ocorrência:\n\n[Descreva aqui a ocorrência]\n\nRomaneio: ${e.NR_ROMANEIO}\nNF: ${e.NR_NF}\nCliente: ${e.DS_CLIENTE}\nCNPJ: ${e.CNPJ}\nEndereço: ${e.CLIENTE_END}\nCidade/UF: ${e.CIDADE} / ${e.UF}\nMotorista: ${e.DS_MOTORISTA}\nTransportadora: ${e.DS_TRANSP}\nPlaca: ${e.PLACA}\nVeículo: ${e.TP_VEICULO}\nCond. Pagamento: ${e.COND_PGTO_CLIENTE}\nValor NF: ${BRL(e.VALOR_NF)}\nEmissão: ${fmtDate(e.DT_EMISSAO_NF)}\nVendedor: ${e.NOME_VENDEDOR}\n\nAtt,`;
+}
+function ocorrenciaSubject(e){
+  return `ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
+}
+function abrirOcorrenciaEmail(nf){
+  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  if(!e) return;
+  const vendInfo = getVendedorInfo(e.NOME_VENDEDOR);
+  if(!vendInfo || !vendInfo.email){
+    toast('Não encontrei o e-mail desse vendedor na Página2. Confira o cadastro na planilha.');
+    return;
+  }
+  const url = buildMailtoUrl([vendInfo.email], OCORRENCIA_CC, ocorrenciaSubject(e), ocorrenciaEmailBody(e));
+  window.location.href = url;
+}
+window.abrirOcorrenciaEmail = abrirOcorrenciaEmail;
 
 /* ============================================================
    19) ADMINISTRADOR — marcar entrega REALIZADO/PENDENTE
