@@ -334,7 +334,9 @@ html.dark .sidebar{background:#070D17;}
 .st-pendencia .status-dot{background:var(--danger);box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);}
 
 /* ---------- Table ---------- */
-.table-scroll{overflow:auto;border-radius:var(--radius-lg);}
+.table-scroll{overflow:auto;border-radius:var(--radius-lg);cursor:grab;}
+.table-scroll.dragging{cursor:grabbing;user-select:none;}
+.table-scroll.dragging *{user-select:none;}
 table.data-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;min-width:1500px;}
 table.data-table thead th{
   position:sticky;top:0;background:var(--surface-2);color:var(--ink-600);
@@ -2680,6 +2682,45 @@ try{
   const savedVendedor = localStorage.getItem('portalVendedorSel');
   if(savedVendedor && ALL_VENDEDORES.includes(savedVendedor)) state.vendedorSel = savedVendedor;
 }catch(e){}
+
+/* ============================================================
+   ARRASTAR PRA ROLAR — funciona em qualquer tabela larga do portal,
+   clicando em qualquer ponto vazio da linha e arrastando pro lado
+   (igual arrastar um mapa), sem precisar mirar na barra de rolagem.
+   ============================================================ */
+(function initDragScrollTables(){
+  let drag = null;
+  document.addEventListener('mousedown', (e)=>{
+    if(e.button !== 0) return; // só botão esquerdo
+    const container = e.target.closest('.table-scroll');
+    if(!container) return;
+    if(e.target.closest('button, a, input, select, textarea, .wa-btn, label')) return; // não atrapalha cliques em ações
+    if(container.scrollWidth <= container.clientWidth) return; // nada pra rolar
+    drag = { container, startX: e.pageX, scrollLeft: container.scrollLeft, moved: 0 };
+    container.classList.add('dragging');
+  });
+  document.addEventListener('mousemove', (e)=>{
+    if(!drag) return;
+    e.preventDefault();
+    const dx = e.pageX - drag.startX;
+    drag.moved = Math.max(drag.moved, Math.abs(dx));
+    drag.container.scrollLeft = drag.scrollLeft - dx;
+  });
+  function endDrag(){
+    if(!drag) return;
+    const { container, moved } = drag;
+    container.classList.remove('dragging');
+    if(moved > 6){
+      // foi um arrasto de verdade — evita que o clique "vaze" e abra o modal da linha sem querer
+      const suppress = (ev)=>{ ev.stopPropagation(); ev.preventDefault(); };
+      container.addEventListener('click', suppress, {capture:true, once:true});
+      setTimeout(()=> container.removeEventListener('click', suppress, {capture:true}), 0);
+    }
+    drag = null;
+  }
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('mouseleave', endDrag);
+})();
 
 setView('entregas');
 
