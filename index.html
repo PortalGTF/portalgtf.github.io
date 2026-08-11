@@ -634,6 +634,19 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
   padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm);cursor:pointer;
 }
 .delivery-card:active{background:var(--surface-2);}
+.delivery-card.dc-atrasada{background:color-mix(in srgb, var(--warn) 6%, var(--surface));border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);}
+tr.row-atrasada{background:color-mix(in srgb, var(--warn) 6%, var(--surface));}
+table.data-table tbody tr.row-atrasada:hover{background:color-mix(in srgb, var(--warn) 11%, var(--surface));}
+tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--warn) 55%, transparent);}
+.atrasada-legend{
+  display:none;align-items:center;gap:7px;font-size:11.5px;color:var(--ink-600);
+  margin-bottom:12px;padding:2px 2px;
+}
+.atrasada-swatch{
+  width:13px;height:13px;border-radius:4px;flex:0 0 auto;
+  background:color-mix(in srgb, var(--warn) 14%, var(--surface));
+  border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);
+}
 .dc-top{display:flex;flex-wrap:wrap;gap:8px 14px;margin-bottom:10px;}
 .dc-top .dc-tag{font-size:11px;color:var(--ink-400);font-weight:600;}
 .dc-top .dc-tag b{display:block;font-size:14px;color:var(--ink-900);font-family:var(--font-mono);font-weight:700;}
@@ -985,6 +998,7 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
             <div class="vendor-dropdown-list" id="placaDropdownList"></div>
           </div>
         </div>
+        <div class="atrasada-legend" id="atrasadaLegend"><span class="atrasada-swatch"></span>Fundo destacado = carga formada em um dia anterior ao mais recente (ainda não saiu no lote esperado)</div>
         <div class="panel">
           <div class="bulk-action-bar" id="bulkActionBar">
             <span id="bulkSelCount">0 selecionadas</span>
@@ -1639,10 +1653,15 @@ function sortList(list){
     if(va<vb) return -1*sortDir; if(va>vb) return 1*sortDir; return 0;
   });
 }
+// Uma carga é "de lote anterior" quando a Formação dela é diferente do dia de
+// referência mais recente da base (ex.: formada sexta, ainda na rua na segunda)
+function isCargaAtrasada(e){ return !!e.DT_FORMACAO && e.DT_FORMACAO !== REF_DATE; }
+
 function buildDeliveryCard(e){
   const sel = isAdminMode()? `<label class="dc-select" onclick="event.stopPropagation()"><input type="checkbox" class="row-select" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></label>` : '';
+  const atrasadaCls = isCargaAtrasada(e) ? ' dc-atrasada' : '';
   return `
-    <div class="delivery-card" data-nf="${e.NR_NF}">
+    <div class="delivery-card${atrasadaCls}" data-nf="${e.NR_NF}">
       <div class="dc-top">
         ${sel}
         <div class="dc-tag">Pedido<b>${e.PEDIDO}</b></div>
@@ -1769,6 +1788,9 @@ function renderTable(list){
   const admin = isAdminMode();
   const colCount = admin? 12 : 11;
 
+  const legendEl = $('#atrasadaLegend');
+  if(legendEl) legendEl.style.display = sorted.some(isCargaAtrasada) ? 'flex' : 'none';
+
   $('#tblEntregas').classList.toggle('admin-active', admin);
 
   const tbody = $('#tblBody');
@@ -1782,7 +1804,7 @@ function renderTable(list){
       <h4>Nenhuma carga encontrada</h4><p>Ajuste a pesquisa ou remova alguns filtros para ver mais resultados.</p></div>`;
   } else {
     tbody.innerHTML = pageItems.map(e=>`
-      <tr data-nf="${e.NR_NF}">
+      <tr data-nf="${e.NR_NF}" class="${isCargaAtrasada(e)?'row-atrasada':''}">
         <td class="col-sel" onclick="event.stopPropagation()"><input type="checkbox" class="row-select" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></td>
         <td class="mono strong">${e.PEDIDO}</td>
         <td>${entregaBadge(e.STATUS_ENTREGA)}</td>
