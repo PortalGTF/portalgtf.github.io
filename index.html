@@ -702,6 +702,7 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
   table.rtbl thead{display:none;}
   table.rtbl, table.rtbl tbody, table.rtbl tr, table.rtbl td{display:block;width:100%;}
   table.rtbl tr{margin-bottom:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);box-shadow:var(--shadow-sm);}
+  table.rtbl tr.row-atrasada{border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);}
   table.rtbl tr:last-child{margin-bottom:0;}
   table.rtbl td{
     text-align:right;padding:6px 0 6px 44%;position:relative;border:none !important;
@@ -1656,6 +1657,10 @@ function sortList(list){
 // Uma carga é "de lote anterior" quando a Formação dela é diferente do dia de
 // referência mais recente da base (ex.: formada sexta, ainda na rua na segunda)
 function isCargaAtrasada(e){ return !!e.DT_FORMACAO && e.DT_FORMACAO !== REF_DATE; }
+function atrasadaLegendMini(list){
+  if(!list.some(isCargaAtrasada)) return '';
+  return `<div class="atrasada-legend" style="display:flex;margin:10px 0 0;"><span class="atrasada-swatch"></span>Fundo destacado = carga formada em um dia anterior ao mais recente</div>`;
+}
 
 function buildDeliveryCard(e){
   const sel = isAdminMode()? `<label class="dc-select" onclick="event.stopPropagation()"><input type="checkbox" class="row-select" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></label>` : '';
@@ -2228,8 +2233,9 @@ function renderVendedores(list){
   const meus = list.filter(e=>e.NOME_VENDEDOR===state.vendedorSel);
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>Pedidos de ${state.vendedorSel}${vendedorWaBtn(state.vendedorSel, true)}</h3><div class="sub">${meus.length} pedidos no filtro atual</div></div>
+    ${atrasadaLegendMini(meus)}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Motorista/Transp.</th><th>Valor</th></tr></thead>
-    <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Motorista/Transp.">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Motorista/Transp.">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
   $$('#vendedorDetalhe tr[data-nf]').forEach(tr=> tr.addEventListener('click', ()=>openTimeline(tr.dataset.nf)));
 }
@@ -2285,8 +2291,9 @@ function renderRedes(list){
   const kp = computeKpis(meus);
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>${state.redeSel}</h3><div class="sub">${meus.length} pedidos · ${BRL(kp.valor)} faturado · ${kp.cidades} cidades</div></div>
+    ${atrasadaLegendMini(meus)}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Transportadora</th><th>Motorista</th><th>Valor</th></tr></thead>
-    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
   $$('#redeDetalhe tr[data-nf]').forEach(tr=> tr.addEventListener('click', ()=>openTimeline(tr.dataset.nf)));
 }
@@ -2327,6 +2334,7 @@ function renderVeiculos(list){
   const admin = isAdminMode();
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>Placa ${state.veiculoSel}</h3><div class="sub">${meus.length} carga(s) · ${BRL(kp.valor)} faturado · ${kp.cidades} cidades atendidas</div></div>
+    ${atrasadaLegendMini(meus)}
     <div class="bulk-action-bar" id="bulkActionBarVeic">
       <span id="bulkSelCountVeic">0 selecionadas</span>
       <div class="bulk-action-bar-btns">
@@ -2338,7 +2346,7 @@ function renderVeiculos(list){
       ${admin?'<th class="col-sel"><input type="checkbox" id="selectAllChkVeic" title="Selecionar todas"></th>':''}
       <th>Entrega</th><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Motorista</th><th>Transportadora</th><th>Valor</th>
     </tr></thead>
-    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;">
+    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}">
       ${admin?`<td class="col-sel" data-label="Selecionar" onclick="event.stopPropagation()"><input type="checkbox" class="row-select-veic" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></td>`:''}
       <td data-label="Entrega">${entregaBadge(e.STATUS_ENTREGA)}</td>
       <td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td>
