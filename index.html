@@ -571,6 +571,24 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
   border-radius:10px;padding:8px 12px;margin-bottom:14px;color:var(--ink-400);max-width:280px;
 }
 .status-veic-search input{border:none;background:none;outline:none;font-size:13px;color:var(--ink-900);width:100%;font-family:var(--font-body);}
+
+/* ---------- Resumo enriquecido (Redes / Vendedores / Veículos) ---------- */
+.detail-summary{background:var(--surface-2);border-radius:var(--radius-md);padding:14px 16px;margin:10px 0 16px;}
+.ds-progress-top{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-600);margin-bottom:6px;}
+.ds-progress-top .strong{color:var(--ink-900);font-weight:800;}
+.ds-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
+.ds-stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;}
+.ds-stat b{display:block;font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ds-stat span{display:block;font-size:10.5px;color:var(--ink-400);font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ds-stat-warn b{color:var(--warn);}
+.ds-stat-nome{font-size:13px !important;}
+.text-warn{color:var(--warn) !important;}
+.ds-cidades{margin-top:14px;}
+.ds-cidades-title{font-size:11px;font-weight:700;color:var(--ink-400);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;}
+.ds-cidades-list{display:flex;flex-wrap:wrap;gap:7px;}
+.ds-cidade-chip{font-size:11.5px;font-weight:600;color:var(--ink-600);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:5px 11px;}
+.ds-cidade-chip.has-pending{color:var(--warn);background:var(--warn-bg);border-color:transparent;}
+@media (max-width:640px){ .ds-stats-grid{grid-template-columns:repeat(2,1fr);} }
 .veic-evo-card:hover{border-color:var(--brand);box-shadow:var(--shadow-sm);transform:translateY(-1px);}
 .veic-evo-placa{color:var(--brand-dark);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;}
 .veic-evo-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
@@ -1548,18 +1566,28 @@ const PINNED_REDES = ['MUFFATO','CIA PARANÁ','COMPANHIA SULAMERICANA','CONDOR',
 
 function renderRedesPinned(list){
   const map = new Map();
-  PINNED_REDES.forEach(r=> map.set(r, {pedidos:0, valor:0, cidades:new Set()}));
+  PINNED_REDES.forEach(r=> map.set(r, {pedidos:0, valor:0, cidades:new Set(), pendentes:0}));
   list.forEach(e=>{
     if(e.REDE && map.has(e.REDE)){
       const m = map.get(e.REDE); m.pedidos++; m.valor+=e.VALOR_NF; m.cidades.add(e.CIDADE);
+      if(e.STATUS_ENTREGA!=='REALIZADO') m.pendentes++;
     }
   });
-  $('#redesPinnedGrid').innerHTML = PINNED_REDES.map(r=>{
+  // Ranking: rede com mais pendências primeiro — quem precisa de atenção primeiro fica em cima.
+  // Redes sem nenhuma carga no período ficam por último, já que não têm o que priorizar.
+  const redesOrdenadas = [...PINNED_REDES].sort((a,b)=>{
+    const ma = map.get(a), mb = map.get(b);
+    if(ma.pedidos===0 && mb.pedidos===0) return 0;
+    if(ma.pedidos===0) return 1;
+    if(mb.pedidos===0) return -1;
+    return mb.pendentes - ma.pendentes || mb.valor - ma.valor;
+  });
+  $('#redesPinnedGrid').innerHTML = redesOrdenadas.map(r=>{
     const m = map.get(r);
     const has = m.pedidos>0;
     return `<button class="pin-rede-card ${has?'':'empty'}" data-rede="${r}">
       <div class="prc-name">${r}</div>
-      ${has? `<div class="prc-stats"><div><span>Pedidos</span><b>${m.pedidos}</b></div><div><span>Valor</span><b>${BRL(m.valor)}</b></div><div><span>Cidades</span><b>${m.cidades.size}</b></div></div>`
+      ${has? `<div class="prc-stats"><div><span>Pedidos</span><b>${m.pedidos}</b></div><div><span>Pendentes</span><b class="${m.pendentes>0?'text-warn':''}">${m.pendentes}</b></div><div><span>Valor</span><b>${BRL(m.valor)}</b></div><div><span>Cidades</span><b>${m.cidades.size}</b></div></div>`
             : `<div class="prc-empty">Sem cargas no período/filtro atual</div>`}
     </button>`;
   }).join('');
@@ -1689,6 +1717,68 @@ function isCargaAtrasada(e){ return !!e.DT_FORMACAO && e.DT_FORMACAO !== REF_DAT
 function atrasadaLegendMini(list){
   if(!list.some(isCargaAtrasada)) return '';
   return `<div class="atrasada-legend" style="display:flex;margin:10px 0 0;"><span class="atrasada-swatch"></span>Fundo destacado = carga formada em um dia anterior ao mais recente</div>`;
+}
+
+/* ============================================================
+   RESUMO ENRIQUECIDO — usado nos detalhes de Redes, Vendedores e
+   Veículos: progresso, pendências por cidade, ticket médio e
+   transportadora/motorista que mais aparece nesse recorte.
+   ============================================================ */
+function computeDetailStats(list){
+  const total = list.length;
+  const entregues = list.filter(e=>e.STATUS_ENTREGA==='REALIZADO').length;
+  const pendentes = total - entregues;
+  const atrasadas = list.filter(isCargaAtrasada).length;
+  const pct = total ? Math.round((entregues/total)*100) : 0;
+  const corClasse = pct>=80 ? 'evo-high' : pct>=40 ? 'evo-mid' : 'evo-low';
+  const valorTotal = list.reduce((s,e)=>s+(e.VALOR_NF||0),0);
+  const ticketMedio = total ? valorTotal/total : 0;
+
+  const porCidade = new Map();
+  list.forEach(e=>{
+    if(!e.CIDADE) return;
+    if(!porCidade.has(e.CIDADE)) porCidade.set(e.CIDADE, {total:0, pendentes:0});
+    const c = porCidade.get(e.CIDADE);
+    c.total++; if(e.STATUS_ENTREGA!=='REALIZADO') c.pendentes++;
+  });
+  const cidadesArr = Array.from(porCidade.entries()).sort((a,b)=> b[1].pendentes - a[1].pendentes || b[1].total - a[1].total);
+
+  const contagem = (campo)=>{
+    const map = new Map();
+    list.forEach(e=>{ const v = e[campo]; if(v) map.set(v, (map.get(v)||0)+1); });
+    let nome=null, qtd=0;
+    map.forEach((q,n)=>{ if(q>qtd){ nome=n; qtd=q; } });
+    return {nome, qtd};
+  };
+  const transpPrincipal = contagem('DS_TRANSP');
+
+  return { total, entregues, pendentes, atrasadas, pct, corClasse, valorTotal, ticketMedio, cidadesArr, transpPrincipal };
+}
+function renderDetailSummaryHtml(stats){
+  return `
+    <div class="detail-summary">
+      <div class="ds-progress">
+        <div class="ds-progress-top"><span>${stats.entregues} de ${stats.total} entregues</span><span class="strong">${stats.pct}%</span></div>
+        <div class="veic-evo-bar"><div class="veic-evo-fill ${stats.corClasse}" style="width:${stats.pct}%"></div></div>
+      </div>
+      <div class="ds-stats-grid">
+        <div class="ds-stat"><b>${NUM(stats.pendentes)}</b><span>pendentes</span></div>
+        <div class="ds-stat${stats.atrasadas>0?' ds-stat-warn':''}"><b>${NUM(stats.atrasadas)}</b><span>de dias anteriores</span></div>
+        <div class="ds-stat"><b>${BRL(stats.ticketMedio)}</b><span>ticket médio</span></div>
+        <div class="ds-stat"><b class="ds-stat-nome" title="${stats.transpPrincipal.nome?escapeHtml(stats.transpPrincipal.nome):''}">${stats.transpPrincipal.nome?escapeHtml(stats.transpPrincipal.nome):'—'}</b><span>${stats.transpPrincipal.qtd? stats.transpPrincipal.qtd+' de '+stats.total+' pedidos':'transportadora principal'}</span></div>
+      </div>
+      ${stats.cidadesArr.length? `<div class="ds-cidades">
+        <div class="ds-cidades-title">Pendências por cidade</div>
+        <div class="ds-cidades-list">${stats.cidadesArr.slice(0,10).map(([cidade,c])=>`<span class="ds-cidade-chip${c.pendentes>0?' has-pending':''}">${escapeHtml(cidade)}: ${c.pendentes} pendente${c.pendentes!==1?'s':''}</span>`).join('')}</div>
+      </div>` : ''}
+    </div>`;
+}
+// Ordena por urgência: atrasado primeiro, depois pendente, entregue por último
+function sortByUrgencia(list){
+  return [...list].sort((a,b)=>{
+    const prio = (e)=> isCargaAtrasada(e) ? 0 : (e.STATUS_ENTREGA!=='REALIZADO' ? 1 : 2);
+    return prio(a) - prio(b);
+  });
 }
 
 function buildDeliveryCard(e){
@@ -2235,16 +2325,19 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeTimeline(); 
 function renderVendedores(list){
   const vend = new Map();
   list.forEach(e=>{
-    if(!vend.has(e.NOME_VENDEDOR)) vend.set(e.NOME_VENDEDOR,{clientes:new Set(),pedidos:0,valor:0,ocorrencias:0});
+    if(!vend.has(e.NOME_VENDEDOR)) vend.set(e.NOME_VENDEDOR,{clientes:new Set(),pedidos:0,valor:0,ocorrencias:0,pendentes:0});
     const v = vend.get(e.NOME_VENDEDOR);
     v.clientes.add(e.DS_CLIENTE); v.pedidos++; v.valor+=e.VALOR_NF;
+    if(e.STATUS_ENTREGA!=='REALIZADO') v.pendentes++;
   });
-  const arr = Array.from(vend.entries()).sort((a,b)=>b[1].valor-a[1].valor);
+  // Ranking: vendedor com mais pendências primeiro
+  const arr = Array.from(vend.entries()).sort((a,b)=> b[1].pendentes-a[1].pendentes || b[1].valor-a[1].valor);
   $('#vendedorGrid').innerHTML = arr.map(([name,v])=>`
     <div class="entity-card ${state.vendedorSel===name?'active':''}" data-vend="${escapeHtml(name)}" role="button" tabindex="0">
       <div class="veic-top-row"><div class="ename">${name}</div>${vendedorWaBtn(name, true)}</div>
       <div class="estats">
         <div><b>${v.pedidos}</b>pedidos</div>
+        <div><b class="${v.pendentes>0?'text-warn':''}">${v.pendentes}</b>pendentes</div>
         <div><b>${v.clientes.size}</b>clientes</div>
       </div>
     </div>`).join('');
@@ -2254,9 +2347,11 @@ function renderVendedores(list){
   }));
   const det = $('#vendedorDetalhe');
   if(!state.vendedorSel){ det.innerHTML=''; return; }
-  const meus = list.filter(e=>e.NOME_VENDEDOR===state.vendedorSel);
+  const meus = sortByUrgencia(list.filter(e=>e.NOME_VENDEDOR===state.vendedorSel));
+  const stats = computeDetailStats(meus);
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>Pedidos de ${state.vendedorSel}${vendedorWaBtn(state.vendedorSel, true)}</h3><div class="sub">${meus.length} pedidos no filtro atual</div></div>
+    ${renderDetailSummaryHtml(stats)}
     ${atrasadaLegendMini(meus)}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Motorista/Transp.</th><th>Valor</th></tr></thead>
     <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Motorista/Transp.">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
@@ -2297,24 +2392,27 @@ function renderRedes(list){
   const redes = new Map();
   list.forEach(e=>{
     if(!e.REDE) return;
-    if(!redes.has(e.REDE)) redes.set(e.REDE,{pedidos:0,valor:0,cidades:new Set()});
+    if(!redes.has(e.REDE)) redes.set(e.REDE,{pedidos:0,valor:0,cidades:new Set(),pendentes:0});
     const r = redes.get(e.REDE); r.pedidos++; r.valor+=e.VALOR_NF; r.cidades.add(e.CIDADE);
+    if(e.STATUS_ENTREGA!=='REALIZADO') r.pendentes++;
   });
   $('#cntRedes').textContent = redes.size;
-  $('#redeGrid').innerHTML = Array.from(redes.entries()).sort((a,b)=>b[1].valor-a[1].valor).map(([name,r])=>`
+  // Ranking: rede com mais pendências primeiro — é quem precisa de atenção primeiro
+  $('#redeGrid').innerHTML = Array.from(redes.entries()).sort((a,b)=> b[1].pendentes-a[1].pendentes || b[1].valor-a[1].valor).map(([name,r])=>`
     <button class="entity-card ${state.redeSel===name?'active':''}" data-rede="${name}">
       <div class="ename">${name}</div>
-      <div class="estats"><div><b>${r.pedidos}</b>pedidos</div><div><b>${r.cidades.size}</b>cidades</div></div>
+      <div class="estats"><div><b>${r.pedidos}</b>pedidos</div><div><b class="${r.pendentes>0?'text-warn':''}">${r.pendentes}</b>pendentes</div><div><b>${r.cidades.size}</b>cidades</div></div>
     </button>`).join('') || `<div class="empty-state"><h4>Nenhuma rede identificada no filtro atual</h4><p>Redes são reconhecidas automaticamente pelo nome do cliente (ex: Muffato, Assaí, Carrefour, Condor, Atacadão).</p></div>`;
   $$('#redeGrid [data-rede]').forEach(b=> b.addEventListener('click', ()=>{
     state.redeSel = state.redeSel===b.dataset.rede? null : b.dataset.rede; state.page=1; render();
   }));
   const det = $('#redeDetalhe');
   if(!state.redeSel){ det.innerHTML=''; return; }
-  const meus = list.filter(e=>e.REDE===state.redeSel);
-  const kp = computeKpis(meus);
+  const meus = sortByUrgencia(list.filter(e=>e.REDE===state.redeSel));
+  const stats = computeDetailStats(meus);
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
-    <div class="panel-head"><h3>${state.redeSel}</h3><div class="sub">${meus.length} pedidos · ${BRL(kp.valor)} faturado · ${kp.cidades} cidades</div></div>
+    <div class="panel-head"><h3>${state.redeSel}</h3><div class="sub">${meus.length} pedidos · ${BRL(stats.valorTotal)} faturado · ${stats.cidadesArr.length} cidades</div></div>
+    ${renderDetailSummaryHtml(stats)}
     ${atrasadaLegendMini(meus)}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Transportadora</th><th>Motorista</th><th>Valor</th></tr></thead>
     <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
@@ -2334,18 +2432,20 @@ function renderVeiculos(list){
   const veic = new Map();
   list.forEach(e=>{
     if(!e.PLACA) return;
-    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null});
+    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null,pendentes:0});
     const v = veic.get(e.PLACA); v.cargas++; v.cidades.add(e.CIDADE); v.motoristas.add(e.DS_MOTORISTA); v.transp.add(e.DS_TRANSP);
     if(!v.telefone && e.TELEFONE_MOTORISTA) v.telefone = e.TELEFONE_MOTORISTA;
+    if(e.STATUS_ENTREGA!=='REALIZADO') v.pendentes++;
   });
   $('#cntVeiculos').textContent = veic.size;
-  $('#veiculoGrid').innerHTML = Array.from(veic.entries()).sort((a,b)=>b[1].cargas-a[1].cargas).map(([placa,v])=>{
+  // Ranking: veículo com mais pendências primeiro
+  $('#veiculoGrid').innerHTML = Array.from(veic.entries()).sort((a,b)=> b[1].pendentes-a[1].pendentes || b[1].cargas-a[1].cargas).map(([placa,v])=>{
     const motoristaPrincipal = Array.from(v.motoristas)[0] || '';
     return `
     <div class="entity-card veic-card ${state.veiculoSel===placa?'active':''}" data-veic="${placa}" role="button" tabindex="0">
       <div class="veic-top-row"><div class="ename mono">${placa}</div>${waBtn(v.telefone, motoristaPrincipal, true)}</div>
       <div style="font-size:11px;color:var(--ink-400);margin:2px 0 8px;">${v.tipo} · ${Array.from(v.motoristas).slice(0,1).join('')}${v.motoristas.size>1?` +${v.motoristas.size-1}`:''}</div>
-      <div class="estats"><div><b>${v.cargas}</b>cargas</div><div><b>${v.cidades.size}</b>cidades</div></div>
+      <div class="estats"><div><b>${v.cargas}</b>cargas</div><div><b class="${v.pendentes>0?'text-warn':''}">${v.pendentes}</b>pendentes</div><div><b>${v.cidades.size}</b>cidades</div></div>
     </div>`;
   }).join('') || `<div class="empty-state"><h4>Nenhum veículo no filtro atual</h4><p>Ajuste os filtros para ver as placas que saíram com carga.</p></div>`;
   $$('#veiculoGrid [data-veic]').forEach(b=> b.addEventListener('click', ()=>{
@@ -2353,11 +2453,12 @@ function renderVeiculos(list){
   }));
   const det = $('#veiculoDetalhe');
   if(!state.veiculoSel){ det.innerHTML=''; return; }
-  const meus = list.filter(e=>e.PLACA===state.veiculoSel);
-  const kp = computeKpis(meus);
+  const meus = sortByUrgencia(list.filter(e=>e.PLACA===state.veiculoSel));
+  const stats = computeDetailStats(meus);
   const admin = isAdminMode();
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
-    <div class="panel-head"><h3>Placa ${state.veiculoSel}</h3><div class="sub">${meus.length} carga(s) · ${BRL(kp.valor)} faturado · ${kp.cidades} cidades atendidas</div></div>
+    <div class="panel-head"><h3>Placa ${state.veiculoSel}</h3><div class="sub">${meus.length} carga(s) · ${BRL(stats.valorTotal)} faturado · ${stats.cidadesArr.length} cidades atendidas</div></div>
+    ${renderDetailSummaryHtml(stats)}
     ${atrasadaLegendMini(meus)}
     <div class="bulk-action-bar" id="bulkActionBarVeic">
       <span id="bulkSelCountVeic">0 selecionadas</span>
