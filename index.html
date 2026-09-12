@@ -1242,7 +1242,7 @@ function buildEntregas(raw){
     const key = r.NR_NF;
     if(!map.has(key)){
       map.set(key,{
-        NR_NF:r.NR_NF, PEDIDO:r.PEDIDO, NR_ROMANEIO:r.NR_ROMANEIO, FILIAL:r.FILIAL, ARMAZEM:r.ARMAZEM,
+        NR_NF:r.NR_NF, PEDIDO:r.PEDIDO, NR_ROMANEIO:r.NR_ROMANEIO, VIAGEM:r.VIAGEM, FILIAL:r.FILIAL, ARMAZEM:r.ARMAZEM,
         CD_TRANSP:r.CD_TRANSP, DS_TRANSP:r.DS_TRANSP, DS_MOTORISTA:r.DS_MOTORISTA, TP_VEICULO:r.TP_VEICULO, PLACA:r.PLACA,
         TELEFONE_MOTORISTA:r.TELEFONE_MOTORISTA,
         CD_CLIENTE:r.CD_CLIENTE, DS_CLIENTE:r.DS_CLIENTE, CNPJ:r.CNPJ, CLIENTE_END:r.CLIENTE_END, CIDADE:r.CIDADE, UF:r.UF,
@@ -1346,7 +1346,7 @@ $('#clearFiltersBtn').addEventListener('click', ()=>{
 /* ---------------- 4) Busca + Filtro aplicado ---------------- */
 function matchesSearch(e, q){
   if(!q) return true;
-  const hay = [e.PEDIDO,e.NR_NF,e.DS_CLIENTE,e.CD_CLIENTE,e.CIDADE,e.DS_MOTORISTA,e.DS_TRANSP,e.PLACA,e.NR_ROMANEIO,e.CNPJ,e.NOME_VENDEDOR,e.REDE,e.CLIENTE_END,e.COND_PGTO_CLIENTE].map(norm).join(' | ');
+  const hay = [e.PEDIDO,e.NR_NF,e.DS_CLIENTE,e.CD_CLIENTE,e.CIDADE,e.DS_MOTORISTA,e.DS_TRANSP,e.PLACA,e.NR_ROMANEIO,e.VIAGEM,e.CNPJ,e.NOME_VENDEDOR,e.REDE,e.CLIENTE_END,e.COND_PGTO_CLIENTE].map(norm).join(' | ');
   return hay.includes(norm(q));
 }
 function applyFilters(list){
@@ -1791,6 +1791,7 @@ function buildDeliveryCard(e){
         <div class="dc-tag">Pedido<b>${e.PEDIDO}</b></div>
         <div class="dc-tag">Nota Fiscal<b>${e.NR_NF}</b></div>
         <div class="dc-tag">Romaneio<b>${e.NR_ROMANEIO}</b></div>
+        ${e.VIAGEM?`<div class="dc-tag">Viagem<b>${e.VIAGEM}</b></div>`:''}
         <div style="margin-left:auto;">${entregaBadge(e.STATUS_ENTREGA)}</div>
       </div>
       <div class="dc-cliente">
@@ -1930,7 +1931,7 @@ function renderTable(list){
     tbody.innerHTML = pageItems.map(e=>`
       <tr data-nf="${e.NR_NF}" class="${isCargaAtrasada(e)?'row-atrasada':''}">
         <td class="col-sel" onclick="event.stopPropagation()"><input type="checkbox" class="row-select" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></td>
-        <td style="white-space:normal;max-width:80px;"><div class="cell-multi"><span class="l1 mono">${e.PEDIDO}</span><span class="l2">NF ${e.NR_NF} · Rom. ${e.NR_ROMANEIO}</span></div></td>
+        <td style="white-space:normal;max-width:80px;"><div class="cell-multi"><span class="l1 mono">${e.PEDIDO}</span><span class="l2">NF ${e.NR_NF} · Rom. ${e.NR_ROMANEIO}</span>${e.VIAGEM?`<span class="l2">Viagem ${e.VIAGEM}</span>`:''}</div></td>
         <td>${entregaBadge(e.STATUS_ENTREGA)}</td>
         <td style="white-space:normal;max-width:108px;"><div class="cell-multi"><span class="l0">${e.NOME_VENDEDOR}${vendedorWaBtn(e.NOME_VENDEDOR)}</span><span class="l1">${e.DS_CLIENTE}${e.temObservacao?` <span title="${escapeHtml(e.OBSERVACAO_PEDIDO)}" style="cursor:help;">📝</span>`:''}</span><span class="l2">Cód: ${e.CD_CLIENTE}${e.REDE?(' · '+e.REDE):''}</span></div></td>
         <td style="white-space:normal;max-width:102px;"><div class="cell-multi"><span class="l1" style="font-weight:500;">${e.CLIENTE_END||'—'}</span><span class="l2">${e.CIDADE} / ${e.UF}</span></div></td>
@@ -2041,7 +2042,7 @@ function buildTimelineSteps(e){
   const steps = [
     {title:'Pedido faturado', date:e.DT_EMISSAO_NF, done:true, detail:`NF ${e.NR_NF} · Pedido ${e.PEDIDO} · ${BRL(e.VALOR_NF)}`},
     {title:'Formação de carga', date:e.DT_FORMACAO, done:!!e.DT_FORMACAO},
-    {title:'Romaneio gerado', date:e.DT_FORMACAO, done:!!e.NR_ROMANEIO, detail:e.NR_ROMANEIO?('Romaneio '+e.NR_ROMANEIO):null},
+    {title:'Romaneio gerado', date:e.DT_FORMACAO, done:!!e.NR_ROMANEIO, detail:e.NR_ROMANEIO?(`Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?(' · Viagem '+e.VIAGEM):''}`):null},
   ];
   if(e.OBSERVACAO_PEDIDO){
     steps.push({title:'📝 Observação da nota/pedido', note:true, done:true, detail:e.OBSERVACAO_PEDIDO});
@@ -2056,7 +2057,7 @@ function openTimeline(nf){
   const html = `
     <div class="modal-head">
       <div class="mh-top">
-        <div><h2>${e.DS_CLIENTE}</h2><div class="mh-sub">NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}</div></div>
+        <div><h2>${e.DS_CLIENTE}</h2><div class="mh-sub">NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?(' · Viagem '+e.VIAGEM):''}</div></div>
         <button class="modal-close" id="modalCloseBtn">✕</button>
       </div>
       <div class="entrega-status-row">
@@ -2152,7 +2153,7 @@ function buildCardImage(e){
   const titleLines = wrapCanvasText(ctx, e.DS_CLIENTE, W-PAD*2);
   titleLines.slice(0,2).forEach((ln,i)=> cmds.push({t:'text', x:PAD, y:36+i*24, text:ln, font:ctx.font, color:'#ffffff'}));
   ctx.font = `600 12.5px ${FONT_BODY}`;
-  cmds.push({t:'text', x:PAD, y:36+titleLines.slice(0,2).length*24+10, text:`NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}`, font:ctx.font, color:'rgba(255,255,255,.85)'});
+  cmds.push({t:'text', x:PAD, y:36+titleLines.slice(0,2).length*24+10, text:`NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?(' · Viagem '+e.VIAGEM):''}`, font:ctx.font, color:'rgba(255,255,255,.85)'});
   y = headerH + 22;
 
   // ---- badge de status ----
@@ -2759,7 +2760,7 @@ $('#darkToggle').addEventListener('click', ()=>{ isDark=!isDark; document.docume
 function currentFiltered(){ return applyFilters(ENTREGAS); }
 function exportRows(list){
   return list.map(e=>({
-    Pedido:e.PEDIDO, NotaFiscal:e.NR_NF, Romaneio:e.NR_ROMANEIO, StatusEntrega:e.STATUS_ENTREGA,
+    Pedido:e.PEDIDO, NotaFiscal:e.NR_NF, Romaneio:e.NR_ROMANEIO, Viagem:e.VIAGEM||'', StatusEntrega:e.STATUS_ENTREGA,
     Cliente:e.DS_CLIENTE, CodigoCliente:e.CD_CLIENTE, Rede:e.REDE||'', CNPJ:e.CNPJ, Endereco:e.CLIENTE_END||'', Cidade:e.CIDADE, UF:e.UF,
     Motorista:e.DS_MOTORISTA, TelefoneMotorista:e.TELEFONE_MOTORISTA||'', Transportadora:e.DS_TRANSP, Placa:e.PLACA, TipoVeiculo:e.TP_VEICULO,
     ValorNF:e.VALOR_NF, DataFormacao:e.DT_FORMACAO, DataEmissao:e.DT_EMISSAO_NF, Vendedor:e.NOME_VENDEDOR,
@@ -2997,7 +2998,7 @@ function findPhoneField(o){
 
 function mapCsvRowToRaw(o){
   return {
-    FILIAL: cleanStr(o.FILIAL), NR_ROMANEIO: cleanStr(o.NR_ROMANEIO), NR_NF: cleanStr(o.NR_NF), PEDIDO: cleanStr(o.PEDIDO),
+    FILIAL: cleanStr(o.FILIAL), VIAGEM: cleanStr(o.VIAGEM), NR_ROMANEIO: cleanStr(o.NR_ROMANEIO), NR_NF: cleanStr(o.NR_NF), PEDIDO: cleanStr(o.PEDIDO),
     CD_TRANSP: cleanStr(o.CD_TRANSP), DS_TRANSP: cleanStr(o.DS_TRANSP), DS_MOTORISTA: cleanStr(o.DS_MOTORISTA),
     TP_VEICULO: cleanStr(o.TP_VEICULO), PLACA: cleanStr(o.PLACA), CD_CLIENTE: cleanIdField(o.CD_CLIENTE), DS_CLIENTE: cleanStr(o.DS_CLIENTE),
     TELEFONE_MOTORISTA: cleanStr(findPhoneField(o)),
@@ -3183,7 +3184,7 @@ function ocorrenciaGreeting(){
   return 'Boa noite a todos,';
 }
 function ocorrenciaEmailBody(e){
-  return `${ocorrenciaGreeting()}\nSegue abaixo os dados da ocorrência:\n\n[Descreva aqui a ocorrência]\n\nRomaneio: ${e.NR_ROMANEIO}\nNF: ${e.NR_NF}\nCliente: ${e.DS_CLIENTE}\nCNPJ: ${e.CNPJ}\nEndereço: ${e.CLIENTE_END}\nCidade/UF: ${e.CIDADE} / ${e.UF}\nMotorista: ${e.DS_MOTORISTA}\nTransportadora: ${e.DS_TRANSP}\nPlaca: ${e.PLACA}\nVeículo: ${e.TP_VEICULO}\nCond. Pagamento: ${e.COND_PGTO_CLIENTE}\nValor NF: ${BRL(e.VALOR_NF)}\nEmissão: ${fmtDate(e.DT_EMISSAO_NF)}\nVendedor: ${e.NOME_VENDEDOR}\n\nAtt,`;
+  return `${ocorrenciaGreeting()}\nSegue abaixo os dados da ocorrência:\n\n[Descreva aqui a ocorrência]\n\nRomaneio: ${e.NR_ROMANEIO}${e.VIAGEM?(`\nViagem: ${e.VIAGEM}`):''}\nNF: ${e.NR_NF}\nCliente: ${e.DS_CLIENTE}\nCNPJ: ${e.CNPJ}\nEndereço: ${e.CLIENTE_END}\nCidade/UF: ${e.CIDADE} / ${e.UF}\nMotorista: ${e.DS_MOTORISTA}\nTransportadora: ${e.DS_TRANSP}\nPlaca: ${e.PLACA}\nVeículo: ${e.TP_VEICULO}\nCond. Pagamento: ${e.COND_PGTO_CLIENTE}\nValor NF: ${BRL(e.VALOR_NF)}\nEmissão: ${fmtDate(e.DT_EMISSAO_NF)}\nVendedor: ${e.NOME_VENDEDOR}\n\nAtt,`;
 }
 function ocorrenciaSubject(e){
   return `ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
@@ -3379,6 +3380,7 @@ function buildMailtoUrl(to, cc, subject, body){
 function pixEmailBody(items){
   const blocos = items.map(e => [
     `Romaneio: ${e.NR_ROMANEIO}`,
+    ...(e.VIAGEM ? [`Viagem: ${e.VIAGEM}`] : []),
     `NF: ${e.NR_NF}`,
     `Pedido: ${e.PEDIDO}`,
     `Cliente: ${e.DS_CLIENTE}`,
