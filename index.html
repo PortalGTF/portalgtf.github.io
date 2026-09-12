@@ -2586,13 +2586,12 @@ function renderStatusView(list){
     const cidadesTxt = Array.from(v.cidades).sort((a,b)=>a.localeCompare(b,'pt-BR')).join(' · ');
     const romaneiosTxt = joinComMais(Array.from(v.romaneios));
     const viagensTxt = joinComMais(Array.from(v.viagens));
+    const placaLinha = `${placa}${romaneiosTxt?` - ROMANEIO: ${romaneiosTxt}`:''}${viagensTxt?` - VIAGEM: ${viagensTxt}`:''}`;
     // 1) Cor do progresso: vermelho < 40%, amarelo 40-80%, verde acima de 80%
     const corClasse = pct>=80 ? 'evo-high' : pct>=40 ? 'evo-mid' : 'evo-low';
     return `<div class="veic-evo-card" data-veic="${escapeHtml(placa)}" role="button" tabindex="0" title="Ver cargas da placa ${escapeHtml(placa)}">
-      <div class="veic-evo-top"><span class="mono strong veic-evo-placa">${placa}</span><span class="veic-evo-pct">${v.feitas} de ${v.total} entregues · ${pct}%</span></div>
+      <div class="veic-evo-top"><span class="mono strong veic-evo-placa">${escapeHtml(placaLinha)}</span><span class="veic-evo-pct">${v.feitas} de ${v.total} entregues · ${pct}%</span></div>
       <div class="veic-evo-bar"><div class="veic-evo-fill ${corClasse}" style="width:${pct}%"></div></div>
-      ${romaneiosTxt?`<div class="veic-evo-cidades"><span>Romaneio(s):</span>${escapeHtml(romaneiosTxt)}</div>`:''}
-      ${viagensTxt?`<div class="veic-evo-cidades"><span>Viagem(ns):</span>${escapeHtml(viagensTxt)}</div>`:''}
       <div class="veic-evo-cidades"><span>Cidades da carga:</span>${escapeHtml(cidadesTxt || '—')}</div>
       ${v.atrasadas>0 ? `<div class="veic-evo-atraso">⚠️ ${v.atrasadas} pedido${v.atrasadas>1?'s':''} de dias anteriores</div>` : ''}
     </div>`;
