@@ -412,6 +412,12 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
 .entity-card .estats{display:flex;gap:14px;}
 .entity-card .estats div{font-size:11px;color:var(--ink-500,var(--ink-600));}
 .entity-card .estats b{display:block;font-family:var(--font-display);font-size:16px;color:var(--brand-dark);}
+.veic-card{padding-bottom:17px;}
+.veic-card-romviag{
+  display:flex;flex-direction:column;gap:2px;
+  font-size:11px;color:var(--ink-600);margin:-3px 0 7px;line-height:1.5;
+}
+.veic-card-romviag b{color:var(--ink-400);font-weight:700;}
 
 /* ---------- Modal / timeline ---------- */
 .modal-overlay{
@@ -1714,6 +1720,12 @@ function sortList(list){
 // Uma carga é "de lote anterior" quando a Formação dela é diferente do dia de
 // referência mais recente da base (ex.: formada sexta, ainda na rua na segunda)
 function isCargaAtrasada(e){ return !!e.DT_FORMACAO && e.DT_FORMACAO !== REF_DATE; }
+function joinComMais(arr, max=6){
+  if(!arr.length) return '';
+  const ordenado = arr.slice().sort((a,b)=>String(a).localeCompare(String(b)));
+  if(ordenado.length<=max) return ordenado.join(' · ');
+  return ordenado.slice(0,max).join(' · ') + ` · +${ordenado.length-max} mais`;
+}
 function atrasadaLegendMini(list){
   if(!list.some(isCargaAtrasada)) return '';
   return `<div class="atrasada-legend" style="display:flex;margin:10px 0 0;"><span class="atrasada-swatch"></span>Fundo destacado = carga formada em um dia anterior ao mais recente</div>`;
@@ -1751,8 +1763,10 @@ function computeDetailStats(list){
     return {nome, qtd};
   };
   const transpPrincipal = contagem('DS_TRANSP');
+  const romaneios = joinComMais(Array.from(new Set(list.map(e=>e.NR_ROMANEIO).filter(Boolean))));
+  const viagens = joinComMais(Array.from(new Set(list.map(e=>e.VIAGEM).filter(Boolean))));
 
-  return { total, entregues, pendentes, atrasadas, pct, corClasse, valorTotal, ticketMedio, cidadesArr, transpPrincipal };
+  return { total, entregues, pendentes, atrasadas, pct, corClasse, valorTotal, ticketMedio, cidadesArr, transpPrincipal, romaneios, viagens };
 }
 function renderDetailSummaryHtml(stats){
   return `
@@ -1767,6 +1781,10 @@ function renderDetailSummaryHtml(stats){
         <div class="ds-stat"><b>${BRL(stats.ticketMedio)}</b><span>ticket médio</span></div>
         <div class="ds-stat"><b class="ds-stat-nome" title="${stats.transpPrincipal.nome?escapeHtml(stats.transpPrincipal.nome):''}">${stats.transpPrincipal.nome?escapeHtml(stats.transpPrincipal.nome):'—'}</b><span>${stats.transpPrincipal.qtd? stats.transpPrincipal.qtd+' de '+stats.total+' pedidos':'transportadora principal'}</span></div>
       </div>
+      ${(stats.romaneios || stats.viagens) ? `<div class="ds-cidades">
+        ${stats.romaneios? `<div class="ds-cidades-title">Romaneio(s)</div><div class="ds-cidades-list" style="margin-bottom:10px;"><span class="ds-cidade-chip">${escapeHtml(stats.romaneios)}</span></div>` : ''}
+        ${stats.viagens? `<div class="ds-cidades-title">Viagem(ns)</div><div class="ds-cidades-list"><span class="ds-cidade-chip">${escapeHtml(stats.viagens)}</span></div>` : ''}
+      </div>` : ''}
       ${stats.cidadesArr.length? `<div class="ds-cidades">
         <div class="ds-cidades-title">Pendências por cidade</div>
         <div class="ds-cidades-list">${stats.cidadesArr.slice(0,10).map(([cidade,c])=>`<span class="ds-cidade-chip${c.pendentes>0?' has-pending':''}">${escapeHtml(cidade)}: ${c.pendentes} pendente${c.pendentes!==1?'s':''}</span>`).join('')}</div>
@@ -2433,18 +2451,23 @@ function renderVeiculos(list){
   const veic = new Map();
   list.forEach(e=>{
     if(!e.PLACA) return;
-    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null,pendentes:0});
+    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null,pendentes:0,romaneios:new Set(),viagens:new Set()});
     const v = veic.get(e.PLACA); v.cargas++; v.cidades.add(e.CIDADE); v.motoristas.add(e.DS_MOTORISTA); v.transp.add(e.DS_TRANSP);
     if(!v.telefone && e.TELEFONE_MOTORISTA) v.telefone = e.TELEFONE_MOTORISTA;
     if(e.STATUS_ENTREGA!=='REALIZADO') v.pendentes++;
+    if(e.NR_ROMANEIO) v.romaneios.add(e.NR_ROMANEIO);
+    if(e.VIAGEM) v.viagens.add(e.VIAGEM);
   });
   $('#cntVeiculos').textContent = veic.size;
   // Ranking: veículo com mais pendências primeiro
   $('#veiculoGrid').innerHTML = Array.from(veic.entries()).sort((a,b)=> b[1].pendentes-a[1].pendentes || b[1].cargas-a[1].cargas).map(([placa,v])=>{
     const motoristaPrincipal = Array.from(v.motoristas)[0] || '';
+    const romTxt = joinComMais(Array.from(v.romaneios), 3);
+    const viagemTxt = joinComMais(Array.from(v.viagens), 3);
     return `
     <div class="entity-card veic-card ${state.veiculoSel===placa?'active':''}" data-veic="${placa}" role="button" tabindex="0">
       <div class="veic-top-row"><div class="ename mono">${placa}</div>${waBtn(v.telefone, motoristaPrincipal, true)}</div>
+      ${(romTxt||viagemTxt)?`<div class="veic-card-romviag">${romTxt?`<span><b>Rom.:</b> ${escapeHtml(romTxt)}</span>`:''}${viagemTxt?`<span><b>Viagem:</b> ${escapeHtml(viagemTxt)}</span>`:''}</div>`:''}
       <div style="font-size:11px;color:var(--ink-400);margin:2px 0 8px;">${v.tipo} · ${Array.from(v.motoristas).slice(0,1).join('')}${v.motoristas.size>1?` +${v.motoristas.size-1}`:''}</div>
       <div class="estats"><div><b>${v.cargas}</b>cargas</div><div><b class="${v.pendentes>0?'text-warn':''}">${v.pendentes}</b>pendentes</div><div><b>${v.cidades.size}</b>cidades</div></div>
     </div>`;
@@ -2475,7 +2498,8 @@ function renderVeiculos(list){
     <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}">
       ${admin?`<td class="col-sel" data-label="Selecionar" onclick="event.stopPropagation()"><input type="checkbox" class="row-select-veic" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></td>`:''}
       <td data-label="Entrega">${entregaBadge(e.STATUS_ENTREGA)}</td>
-      <td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td>
+      <td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td>
+      <td data-label="Cliente">${e.DS_CLIENTE}</td>
       <td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td>
       <td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td>
     </tr>`).join('')}</tbody></table></div>
@@ -2527,11 +2551,13 @@ function renderStatusView(list){
   const veic = new Map();
   list.forEach(e=>{
     if(!e.PLACA) return;
-    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{total:0,feitas:0,cidades:new Set(),atrasadas:0});
+    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{total:0,feitas:0,cidades:new Set(),atrasadas:0,romaneios:new Set(),viagens:new Set()});
     const v = veic.get(e.PLACA);
     v.total++; if(e.STATUS_ENTREGA==='REALIZADO') v.feitas++;
     if(e.CIDADE) v.cidades.add(e.CIDADE);
     if(isCargaAtrasada(e)) v.atrasadas++;
+    if(e.NR_ROMANEIO) v.romaneios.add(e.NR_ROMANEIO);
+    if(e.VIAGEM) v.viagens.add(e.VIAGEM);
   });
 
   // 3) Resumo geral do dia + 4) aviso de veículos com pedidos de dias anteriores
@@ -2558,11 +2584,15 @@ function renderStatusView(list){
   $('#veiculoEvolucaoList').innerHTML = arr.map(([placa,v])=>{
     const pct = Math.round((v.feitas/v.total)*100);
     const cidadesTxt = Array.from(v.cidades).sort((a,b)=>a.localeCompare(b,'pt-BR')).join(' · ');
+    const romaneiosTxt = joinComMais(Array.from(v.romaneios));
+    const viagensTxt = joinComMais(Array.from(v.viagens));
     // 1) Cor do progresso: vermelho < 40%, amarelo 40-80%, verde acima de 80%
     const corClasse = pct>=80 ? 'evo-high' : pct>=40 ? 'evo-mid' : 'evo-low';
     return `<div class="veic-evo-card" data-veic="${escapeHtml(placa)}" role="button" tabindex="0" title="Ver cargas da placa ${escapeHtml(placa)}">
       <div class="veic-evo-top"><span class="mono strong veic-evo-placa">${placa}</span><span class="veic-evo-pct">${v.feitas} de ${v.total} entregues · ${pct}%</span></div>
       <div class="veic-evo-bar"><div class="veic-evo-fill ${corClasse}" style="width:${pct}%"></div></div>
+      ${romaneiosTxt?`<div class="veic-evo-cidades"><span>Romaneio(s):</span>${escapeHtml(romaneiosTxt)}</div>`:''}
+      ${viagensTxt?`<div class="veic-evo-cidades"><span>Viagem(ns):</span>${escapeHtml(viagensTxt)}</div>`:''}
       <div class="veic-evo-cidades"><span>Cidades da carga:</span>${escapeHtml(cidadesTxt || '—')}</div>
       ${v.atrasadas>0 ? `<div class="veic-evo-atraso">⚠️ ${v.atrasadas} pedido${v.atrasadas>1?'s':''} de dias anteriores</div>` : ''}
     </div>`;
