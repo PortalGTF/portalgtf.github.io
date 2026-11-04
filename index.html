@@ -1259,6 +1259,7 @@ function buildEntregas(raw){
       });
     }
     const e = map.get(key);
+    if(r.STATUS_ENTREGA==='REALIZADO') e.STATUS_ENTREGA = 'REALIZADO'; // basta uma linha da nota estar realizada
     if(r.BAIXA_CANHOTO) e.BAIXA_CANHOTO = r.BAIXA_CANHOTO; // qualquer linha com baixa marca a NF como baixada
     if(r.BAIXA_FINANCEIRO && r.VALOR_FINANCEIRO && Math.abs(r.BAIXA_FINANCEIRO - r.VALOR_FINANCEIRO) < 0.02){
       e.valorFinanceiroBaixado += r.VALOR_FINANCEIRO;
@@ -3088,6 +3089,7 @@ function timeAgo(date){
 }
 
 let lastSyncTime = null;
+let lastSyncResumo = '';
 let syncInFlight = false;
 async function syncFromGoogleSheets(manual){
   if(syncInFlight) return;
@@ -3109,13 +3111,19 @@ async function syncFromGoogleSheets(manual){
       headers.forEach((h,i)=> obj[h] = r[i]!==undefined? r[i] : '');
       return mapCsvRowToRaw(obj);
     });
+    const temColunaEntrega = headers.some(h=>h.toUpperCase()==='ENTREGA');
     ENTREGAS = buildEntregas(rawRows);
+    const realizadasNaPlanilha = ENTREGAS.filter(e=>e.STATUS_ENTREGA==='REALIZADO').length;
+    lastSyncResumo = temColunaEntrega
+      ? ` · planilha: ${realizadasNaPlanilha} NF realizada${realizadasNaPlanilha===1?'':'s'}`
+      : ' · ⚠ coluna ENTREGA não encontrada na planilha publicada';
     aplicarMarcacoesLocais(ENTREGAS);
     REF_DATE = computeRefDate(ENTREGAS);
     populateStaticUI();
     render();
     lastSyncTime = new Date();
-    updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}`, 'ok');
+    updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}${lastSyncResumo}`, lastSyncResumo.includes('⚠')?'error':'ok');
+    sincronizarStatusAoVivo();
     if(manual) toast(`Planilha sincronizada: ${ENTREGAS.length} notas fiscais carregadas`);
   } catch(err){
     console.error('Falha ao sincronizar com Google Sheets:', err);
@@ -3128,7 +3136,7 @@ async function syncFromGoogleSheets(manual){
 
 const syncBtn = $('#syncBtn');
 if(syncBtn) syncBtn.addEventListener('click', ()=> syncFromGoogleSheets(true));
-setInterval(()=>{ if(lastSyncTime) updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}`, 'ok'); }, 30000);
+setInterval(()=>{ if(lastSyncTime) updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}${lastSyncResumo}`, lastSyncResumo.includes('⚠')?'error':'ok'); }, 30000);
 setInterval(()=> syncFromGoogleSheets(false), SYNC_INTERVAL_MS);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') syncFromGoogleSheets(false); });
 // Primeira sincronização logo na abertura, sem bloquear a exibição dos dados já embutidos
@@ -3277,6 +3285,34 @@ async function callAppsScript(params){
   const resp = await fetch(url, {method:'GET', redirect:'follow', cache:'no-store'});
   if(!resp.ok) throw new Error('HTTP '+resp.status);
   return resp.json();
+}
+
+let statusAoVivoEmAndamento = false;
+// Lê o status direto da planilha pelo Apps Script (ação "listar"), sem esperar a planilha publicada atualizar.
+async function sincronizarStatusAoVivo(){
+  if(statusAoVivoEmAndamento) return;
+  statusAoVivoEmAndamento = true;
+  try{
+    const r = await callAppsScript({action:'listar'});
+    if(!r || !r.ok || !r.status) throw new Error((r && r.error) || 'resposta inválida');
+    const autoritativo = (r.v||1) >= 2; // script novo: considera todas as linhas da NF, então vale nos dois sentidos
+    ENTREGAS.forEach(e=>{
+      const st = r.status[String(e.NR_NF)];
+      if(st==='REALIZADO') e.STATUS_ENTREGA = 'REALIZADO';
+      else if(autoritativo && st!==undefined) e.STATUS_ENTREGA = 'PENDENTE';
+    });
+    aplicarMarcacoesLocais(ENTREGAS);
+    const n = ENTREGAS.filter(e=>e.STATUS_ENTREGA==='REALIZADO').length;
+    lastSyncResumo = ` · ao vivo: ${n} NF realizada${n===1?'':'s'}`;
+    render();
+    if(lastSyncTime) updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}${lastSyncResumo}`, 'ok');
+  }catch(err){
+    console.warn('Leitura ao vivo do status indisponível:', err);
+    lastSyncResumo += ' · leitura ao vivo indisponível';
+    if(lastSyncTime) updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}${lastSyncResumo}`, lastSyncResumo.includes('⚠')?'error':'ok');
+  }finally{
+    statusAoVivoEmAndamento = false;
+  }
 }
 
 function setAdminUI(){
