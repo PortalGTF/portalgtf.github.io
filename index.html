@@ -1272,7 +1272,36 @@ function buildEntregas(raw){
   return list;
 }
 
+/* Marcações feitas neste aparelho ficam "protegidas" até a planilha publicada confirmar.
+   A planilha publicada (CSV) pode demorar alguns minutos pra refletir o que o Apps Script
+   escreveu — sem isso, a sincronização trazia o status antigo e a entrega voltava a pendente. */
+function lerMarcacoesLocais(){
+  try{ return JSON.parse(localStorage.getItem('portalMarcacoesLocais')||'{}') || {}; }catch(e){ return {}; }
+}
+function salvarMarcacoesLocais(m){
+  try{ localStorage.setItem('portalMarcacoesLocais', JSON.stringify(m)); }catch(e){}
+}
+function registrarMarcacaoLocal(nf, status){
+  const m = lerMarcacoesLocais();
+  m[String(nf)] = {status: status, ts: Date.now()};
+  salvarMarcacoesLocais(m);
+}
+function aplicarMarcacoesLocais(lista){
+  const TTL = 20*60*1000; // 20 min
+  const m = lerMarcacoesLocais();
+  const agora = Date.now();
+  let mudou = false;
+  Object.keys(m).forEach(k=>{ if(agora - m[k].ts > TTL){ delete m[k]; mudou = true; } });
+  lista.forEach(e=>{
+    const o = m[String(e.NR_NF)];
+    if(!o) return;
+    if(e.STATUS_ENTREGA === o.status){ delete m[String(e.NR_NF)]; mudou = true; } // planilha já confirmou
+    else e.STATUS_ENTREGA = o.status;
+  });
+  if(mudou) salvarMarcacoesLocais(m);
+}
 let ENTREGAS = buildEntregas(RAW_DATA);
+aplicarMarcacoesLocais(ENTREGAS);
 function computeRefDate(list){
   return list.reduce((m,e)=> e.DT_FORMACAO>m? e.DT_FORMACAO:m, list[0]?list[0].DT_FORMACAO:'');
 }
@@ -3081,6 +3110,7 @@ async function syncFromGoogleSheets(manual){
       return mapCsvRowToRaw(obj);
     });
     ENTREGAS = buildEntregas(rawRows);
+    aplicarMarcacoesLocais(ENTREGAS);
     REF_DATE = computeRefDate(ENTREGAS);
     populateStaticUI();
     render();
@@ -3319,6 +3349,7 @@ async function marcarEntrega(nf, novoStatus){
     if(r.ok){
       const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
       if(e) e.STATUS_ENTREGA = r.status;
+      registrarMarcacaoLocal(nf, r.status);
       toast(novoStatus==='REALIZADO'? 'Entrega marcada como realizada' : 'Entrega marcada como pendente');
       render();
       if($('#modalOverlay').classList.contains('open')) openTimeline(nf);
@@ -3353,6 +3384,7 @@ async function marcarEntregaLote(nfs, novoStatus, btnSelector){
       if(r.ok){
         const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
         if(e) e.STATUS_ENTREGA = r.status;
+      registrarMarcacaoLocal(nf, r.status);
         ok++;
         if(novoStatus==='REALIZADO' && e && isPixSale(e)) pixMarcados.push(e);
       } else if(r.error==='Senha incorreta.'){
