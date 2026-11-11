@@ -413,6 +413,8 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
 .entity-card .estats div{font-size:11px;color:var(--ink-500,var(--ink-600));}
 .entity-card .estats b{display:block;font-family:var(--font-display);font-size:16px;color:var(--brand-dark);}
 .veic-card{padding-bottom:17px;}
+.entity-card.veic-card-atrasada{background:color-mix(in srgb, var(--warn) 8%, var(--surface));border-color:color-mix(in srgb, var(--warn) 40%, var(--line));}
+.entity-card.veic-card-atrasada.active{border-color:var(--brand);}
 .veic-card-romviag{
   display:flex;flex-direction:column;gap:2px;
   font-size:11px;color:var(--ink-600);margin:-3px 0 7px;line-height:1.5;
@@ -578,6 +580,15 @@ table.data-table td.strong{color:var(--ink-900);font-weight:600;}
 }
 .status-veic-search input{border:none;background:none;outline:none;font-size:13px;color:var(--ink-900);width:100%;font-family:var(--font-body);}
 
+/* ---------- Origem da carga (Terra Boa x Apucarana) ---------- */
+.origem-badge{display:inline-flex;align-items:center;font-size:9.5px;font-weight:700;letter-spacing:.02em;border-radius:20px;padding:2px 8px;white-space:nowrap;line-height:1.5;}
+.origem-tb{color:#7C3AED;background:color-mix(in srgb,#7C3AED 13%,transparent);}
+.origem-ap{color:#2563EB;background:color-mix(in srgb,#2563EB 13%,transparent);}
+html.dark .origem-tb{color:#B79BFF;}
+html.dark .origem-ap{color:#7FB0FF;}
+.veic-card-origem{display:flex;flex-wrap:wrap;gap:5px;margin:-3px 0 7px;}
+.veic-evo-left{display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0;}
+.ds-origem{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;font-size:11px;color:var(--ink-400);font-weight:600;}
 /* ---------- Resumo enriquecido (Redes / Vendedores / Veículos) ---------- */
 .detail-summary{background:var(--surface-2);border-radius:var(--radius-md);padding:14px 16px;margin:10px 0 16px;}
 .ds-progress-top{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-600);margin-bottom:6px;}
@@ -906,7 +917,7 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
       <div class="brand-mark brand-mark-logo">
         <img src="data:image/png;base64,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" alt="GTF" width="26" height="20">
       </div>
-      <div class="brand-text"><b>Portal de Cargas GTF</b><span>Monitoramento · Filial <span id="brandFilial">—</span></span></div>
+      <div class="brand-text"><b>Portal de Cargas GTF</b><span>Monitoramento · <span id="brandFilial">—</span></span></div>
     </div>
 
     <div class="nav" id="navList">
@@ -1349,11 +1360,12 @@ function populateStaticUI(){
     clearSelectOptions(id);
     const vals = uniq(ENTREGAS,key);
     fillSelect(id, vals);
+    if(id==='#fFilial') Array.from($(id).options).forEach(o=>{ if(o.value) o.textContent = rotuloFilial(o.value); });
     const current = state.filters[filterKey];
     if(current && vals.includes(current)){ $(id).value = current; }
     else if(current){ delete state.filters[filterKey]; $(id).value=''; }
   });
-  $('#brandFilial').textContent = ENTREGAS[0]?ENTREGAS[0].FILIAL:'—';
+  $('#brandFilial').textContent = ENTREGAS.length ? (rotuloOrigens() || ENTREGAS[0].FILIAL) : '—';
   $('#hRef').textContent = fmtDate(REF_DATE);
   $('#footUpdated').textContent = fmtDate(REF_DATE);
   $('#footNfs').textContent = NUM(ENTREGAS.length);
@@ -1749,6 +1761,27 @@ function sortList(list){
 }
 // Uma carga é "de lote anterior" quando a Formação dela é diferente do dia de
 // referência mais recente da base (ex.: formada sexta, ainda na rua na segunda)
+/* Origem da carga: FILIAL 1026 = Terra Boa; FILIAL 1052 = Apucarana.
+   Se a filial vier vazia, usa a viagem como critério (com viagem = Terra Boa, só romaneio = Apucarana). */
+function origemDaCarga(e){
+  const f = String(e.FILIAL==null?'':e.FILIAL).trim();
+  if(f==='1026') return 'Terra Boa';
+  if(f==='1052') return 'Apucarana';
+  if(!f) return e.VIAGEM ? 'Terra Boa' : 'Apucarana';
+  return null;
+}
+function origemBadge(origem){
+  if(!origem) return '';
+  return `<span class="origem-badge ${origem==='Terra Boa'?'origem-tb':'origem-ap'}">${origem}</span>`;
+}
+function rotuloOrigens(lista){
+  const set = new Set((lista||ENTREGAS).map(origemDaCarga).filter(Boolean));
+  return Array.from(set).sort().join(' + ');
+}
+function rotuloFilial(v){
+  const o = origemDaCarga({FILIAL:v});
+  return o ? `${o} (${v})` : String(v);
+}
 function isCargaAtrasada(e){ return !!e.DT_FORMACAO && e.DT_FORMACAO !== REF_DATE; }
 function joinComMais(arr, max=6){
   if(!arr.length) return '';
@@ -1796,11 +1829,14 @@ function computeDetailStats(list){
   const romaneios = joinComMais(Array.from(new Set(list.map(e=>e.NR_ROMANEIO).filter(Boolean))));
   const viagens = joinComMais(Array.from(new Set(list.map(e=>e.VIAGEM).filter(Boolean))));
 
-  return { total, entregues, pendentes, atrasadas, pct, corClasse, valorTotal, ticketMedio, cidadesArr, transpPrincipal, romaneios, viagens };
+  const origemCont = {};
+  list.forEach(e=>{ const o = origemDaCarga(e); if(o) origemCont[o] = (origemCont[o]||0)+1; });
+  return { total, entregues, pendentes, atrasadas, pct, corClasse, valorTotal, ticketMedio, cidadesArr, transpPrincipal, romaneios, viagens, origemCont };
 }
 function renderDetailSummaryHtml(stats){
   return `
     <div class="detail-summary">
+      ${Object.keys(stats.origemCont||{}).length?`<div class="ds-origem">Origem: ${Object.keys(stats.origemCont).sort().map(o=>`${origemBadge(o)} ${stats.origemCont[o]} pedido${stats.origemCont[o]>1?'s':''}`).join(' &nbsp;·&nbsp; ')}</div>`:''}
       <div class="ds-progress">
         <div class="ds-progress-top"><span>${stats.entregues} de ${stats.total} entregues</span><span class="strong">${stats.pct}%</span></div>
         <div class="veic-evo-bar"><div class="veic-evo-fill ${stats.corClasse}" style="width:${stats.pct}%"></div></div>
@@ -1840,6 +1876,7 @@ function buildDeliveryCard(e){
         <div class="dc-tag">Nota Fiscal<b>${e.NR_NF}</b></div>
         <div class="dc-tag">Romaneio<b>${e.NR_ROMANEIO}</b></div>
         ${e.VIAGEM?`<div class="dc-tag">Viagem<b>${e.VIAGEM}</b></div>`:''}
+        ${origemDaCarga(e)?`<div class="dc-tag">Origem<b style="font-family:var(--font-body);">${origemBadge(origemDaCarga(e))}</b></div>`:''}
         <div style="margin-left:auto;">${entregaBadge(e.STATUS_ENTREGA)}</div>
       </div>
       <div class="dc-cliente">
@@ -1979,7 +2016,7 @@ function renderTable(list){
     tbody.innerHTML = pageItems.map(e=>`
       <tr data-nf="${e.NR_NF}" class="${isCargaAtrasada(e)?'row-atrasada':''}">
         <td class="col-sel" onclick="event.stopPropagation()"><input type="checkbox" class="row-select" data-nf="${e.NR_NF}" ${state.selectedNFs.has(String(e.NR_NF))?'checked':''}></td>
-        <td style="white-space:normal;max-width:80px;"><div class="cell-multi"><span class="l1 mono">${e.PEDIDO}</span><span class="l2">NF ${e.NR_NF} · Rom. ${e.NR_ROMANEIO}</span>${e.VIAGEM?`<span class="l2">Viagem ${e.VIAGEM}</span>`:''}</div></td>
+        <td style="white-space:normal;max-width:80px;"><div class="cell-multi"><span class="l1 mono">${e.PEDIDO}</span><span class="l2">NF ${e.NR_NF} · Rom. ${e.NR_ROMANEIO}</span>${e.VIAGEM?`<span class="l2">Viagem ${e.VIAGEM}</span>`:''}<span style="margin-top:3px;">${origemBadge(origemDaCarga(e))}</span></div></td>
         <td>${entregaBadge(e.STATUS_ENTREGA)}</td>
         <td style="white-space:normal;max-width:108px;"><div class="cell-multi"><span class="l0">${e.NOME_VENDEDOR}${vendedorWaBtn(e.NOME_VENDEDOR)}</span><span class="l1">${e.DS_CLIENTE}${e.temObservacao?` <span title="${escapeHtml(e.OBSERVACAO_PEDIDO)}" style="cursor:help;">📝</span>`:''}</span><span class="l2">Cód: ${e.CD_CLIENTE}${e.REDE?(' · '+e.REDE):''}</span></div></td>
         <td style="white-space:normal;max-width:102px;"><div class="cell-multi"><span class="l1" style="font-weight:500;">${e.CLIENTE_END||'—'}</span><span class="l2">${e.CIDADE} / ${e.UF}</span></div></td>
@@ -2058,7 +2095,7 @@ const FILTER_LABELS = {fPeriodo:'Período', fFilial:'Filial', fUF:'UF', fCidade:
 function renderChips(){
   const chips = [];
   Object.entries(state.filters).forEach(([k,v])=>{
-    if(v) chips.push({id:k, label:`${FILTER_LABELS[k]}: ${v}`});
+    if(v) chips.push({id:k, label:`${FILTER_LABELS[k]}: ${k==='fFilial'?rotuloFilial(v):v}`});
   });
   if(state.search) chips.push({id:'__search', label:`Busca: "${state.search}"`});
   if(state.vendedorSel) chips.push({id:'__vend', label:`Vendedor: ${state.vendedorSel}`});
@@ -2110,6 +2147,7 @@ function openTimeline(nf){
       </div>
       <div class="entrega-status-row">
         ${entregaBadge(e.STATUS_ENTREGA)}
+        ${origemBadge(origemDaCarga(e))}
         <button type="button" class="btn btn-sm" id="shareCardBtn" onclick="shareCardImage('${e.NR_NF}')">📤 Compartilhar</button>
         <button type="button" class="btn btn-sm" id="ocorrenciaBtn" onclick="abrirOcorrenciaEmail('${e.NR_NF}')">🚨 Abertura Oc.</button>
         ${isAdminMode()? `<button type="button" class="btn btn-sm ${e.STATUS_ENTREGA==='REALIZADO'?'':'btn-primary'}" onclick="marcarEntrega('${e.NR_NF}','${e.STATUS_ENTREGA==='REALIZADO'?'PENDENTE':'REALIZADO'}')">${e.STATUS_ENTREGA==='REALIZADO'? 'Desfazer, marcar como pendente' : '✓ Marcar como entregue'}</button>` : ''}
@@ -2201,7 +2239,7 @@ function buildCardImage(e){
   const titleLines = wrapCanvasText(ctx, e.DS_CLIENTE, W-PAD*2);
   titleLines.slice(0,2).forEach((ln,i)=> cmds.push({t:'text', x:PAD, y:36+i*24, text:ln, font:ctx.font, color:'#ffffff'}));
   ctx.font = `600 12.5px ${FONT_BODY}`;
-  cmds.push({t:'text', x:PAD, y:36+titleLines.slice(0,2).length*24+10, text:`NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?(' · Viagem '+e.VIAGEM):''}`, font:ctx.font, color:'rgba(255,255,255,.85)'});
+  cmds.push({t:'text', x:PAD, y:36+titleLines.slice(0,2).length*24+10, text:`NF ${e.NR_NF} · Pedido ${e.PEDIDO} · Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?(' · Viagem '+e.VIAGEM):''}${origemDaCarga(e)?(' · '+origemDaCarga(e)):''}`, font:ctx.font, color:'rgba(255,255,255,.85)'});
   y = headerH + 22;
 
   // ---- badge de status ----
@@ -2481,8 +2519,8 @@ function renderVeiculos(list){
   const veic = new Map();
   list.forEach(e=>{
     if(!e.PLACA) return;
-    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null,pendentes:0,romaneios:new Set(),viagens:new Set()});
-    const v = veic.get(e.PLACA); v.cargas++; v.cidades.add(e.CIDADE); v.motoristas.add(e.DS_MOTORISTA); v.transp.add(e.DS_TRANSP);
+    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{cargas:0,cidades:new Set(),tipo:e.TP_VEICULO,motoristas:new Set(),transp:new Set(),telefone:null,pendentes:0,atrasadasPend:0,romaneios:new Set(),viagens:new Set(),origens:new Set()});
+    const v = veic.get(e.PLACA); v.cargas++; if(isCargaAtrasada(e) && e.STATUS_ENTREGA!=='REALIZADO') v.atrasadasPend++; if(origemDaCarga(e)) v.origens.add(origemDaCarga(e)); v.cidades.add(e.CIDADE); v.motoristas.add(e.DS_MOTORISTA); v.transp.add(e.DS_TRANSP);
     if(!v.telefone && e.TELEFONE_MOTORISTA) v.telefone = e.TELEFONE_MOTORISTA;
     if(e.STATUS_ENTREGA!=='REALIZADO') v.pendentes++;
     if(e.NR_ROMANEIO) v.romaneios.add(e.NR_ROMANEIO);
@@ -2495,8 +2533,9 @@ function renderVeiculos(list){
     const romTxt = joinComMais(Array.from(v.romaneios), 3);
     const viagemTxt = joinComMais(Array.from(v.viagens), 3);
     return `
-    <div class="entity-card veic-card ${state.veiculoSel===placa?'active':''}" data-veic="${placa}" role="button" tabindex="0">
+    <div class="entity-card veic-card ${v.atrasadasPend>0?'veic-card-atrasada':''} ${state.veiculoSel===placa?'active':''}" data-veic="${placa}" role="button" tabindex="0"${v.atrasadasPend>0?` title="${v.atrasadasPend} entrega${v.atrasadasPend>1?'s':''} pendente${v.atrasadasPend>1?'s':''} de dias anteriores"`:''}>
       <div class="veic-top-row"><div class="ename mono">${placa}</div>${waBtn(v.telefone, motoristaPrincipal, true)}</div>
+      ${v.origens.size?`<div class="veic-card-origem">${Array.from(v.origens).sort().map(origemBadge).join('')}</div>`:''}
       ${(romTxt||viagemTxt)?`<div class="veic-card-romviag">${romTxt?`<span><b>Rom.:</b> ${escapeHtml(romTxt)}</span>`:''}${viagemTxt?`<span><b>Viagem:</b> ${escapeHtml(viagemTxt)}</span>`:''}</div>`:''}
       <div style="font-size:11px;color:var(--ink-400);margin:2px 0 8px;">${v.tipo} · ${Array.from(v.motoristas).slice(0,1).join('')}${v.motoristas.size>1?` +${v.motoristas.size-1}`:''}</div>
       <div class="estats"><div><b>${v.cargas}</b>cargas</div><div><b class="${v.pendentes>0?'text-warn':''}">${v.pendentes}</b>pendentes</div><div><b>${v.cidades.size}</b>cidades</div></div>
@@ -2581,8 +2620,8 @@ function renderStatusView(list){
   const veic = new Map();
   list.forEach(e=>{
     if(!e.PLACA) return;
-    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{total:0,feitas:0,cidades:new Set(),atrasadas:0,romaneios:new Set(),viagens:new Set()});
-    const v = veic.get(e.PLACA);
+    if(!veic.has(e.PLACA)) veic.set(e.PLACA,{total:0,feitas:0,cidades:new Set(),atrasadas:0,romaneios:new Set(),viagens:new Set(),origens:new Set()});
+    const v = veic.get(e.PLACA); if(origemDaCarga(e)) v.origens.add(origemDaCarga(e));
     v.total++; if(e.STATUS_ENTREGA==='REALIZADO') v.feitas++;
     if(e.CIDADE) v.cidades.add(e.CIDADE);
     if(isCargaAtrasada(e)) v.atrasadas++;
@@ -2620,7 +2659,7 @@ function renderStatusView(list){
     // 1) Cor do progresso: vermelho < 40%, amarelo 40-80%, verde acima de 80%
     const corClasse = pct>=80 ? 'evo-high' : pct>=40 ? 'evo-mid' : 'evo-low';
     return `<div class="veic-evo-card" data-veic="${escapeHtml(placa)}" role="button" tabindex="0" title="Ver cargas da placa ${escapeHtml(placa)}">
-      <div class="veic-evo-top"><span class="mono strong veic-evo-placa">${escapeHtml(placaLinha)}</span><span class="veic-evo-pct">${v.feitas} de ${v.total} entregues · ${pct}%</span></div>
+      <div class="veic-evo-top"><span class="veic-evo-left"><span class="mono strong veic-evo-placa">${escapeHtml(placaLinha)}</span>${Array.from(v.origens).sort().map(origemBadge).join('')}</span><span class="veic-evo-pct">${v.feitas} de ${v.total} entregues · ${pct}%</span></div>
       <div class="veic-evo-bar"><div class="veic-evo-fill ${corClasse}" style="width:${pct}%"></div></div>
       <div class="veic-evo-cidades"><span>Cidades da carga:</span>${escapeHtml(cidadesTxt || '—')}</div>
       ${v.atrasadas>0 ? `<div class="veic-evo-atraso">⚠️ ${v.atrasadas} pedido${v.atrasadas>1?'s':''} de dias anteriores</div>` : ''}
@@ -2759,7 +2798,7 @@ function exportStatusPdf(status){
   const rows = ENTREGAS.filter(e=>e.STATUS_ENTREGA===status);
   if(!rows.length){ toast('Nenhuma carga nesse status para exportar'); return; }
   const titulo = status==='REALIZADO'? 'Relatório de Entregas Realizadas' : 'Relatório de Entregas Pendentes';
-  const subtitulo = `Filial ${ENTREGAS[0]?ENTREGAS[0].FILIAL:''} · Gerado em ${fmtDate(REF_DATE)} · ${rows.length} carga(s)`;
+  const subtitulo = `${rotuloOrigens(rows)} · Gerado em ${fmtDate(REF_DATE)} · ${rows.length} carga(s)`;
   const pdfStr = buildTablePdf({title:titulo, subtitle:subtitulo, columns:REPORT_COLUMNS, rows:rows.map(toReportRow)});
   const nomeArquivo = `entregas_${status==='REALIZADO'?'realizadas':'pendentes'}_${REF_DATE||'relatorio'}.pdf`;
   downloadPdfString(pdfStr, nomeArquivo);
@@ -2819,7 +2858,7 @@ $('#darkToggle').addEventListener('click', ()=>{ isDark=!isDark; document.docume
 function currentFiltered(){ return applyFilters(ENTREGAS); }
 function exportRows(list){
   return list.map(e=>({
-    Pedido:e.PEDIDO, NotaFiscal:e.NR_NF, Romaneio:e.NR_ROMANEIO, Viagem:e.VIAGEM||'', StatusEntrega:e.STATUS_ENTREGA,
+    Pedido:e.PEDIDO, NotaFiscal:e.NR_NF, Romaneio:e.NR_ROMANEIO, Viagem:e.VIAGEM||'', Origem:origemDaCarga(e)||'', StatusEntrega:e.STATUS_ENTREGA,
     Cliente:e.DS_CLIENTE, CodigoCliente:e.CD_CLIENTE, Rede:e.REDE||'', CNPJ:e.CNPJ, Endereco:e.CLIENTE_END||'', Cidade:e.CIDADE, UF:e.UF,
     Motorista:e.DS_MOTORISTA, TelefoneMotorista:e.TELEFONE_MOTORISTA||'', Transportadora:e.DS_TRANSP, Placa:e.PLACA, TipoVeiculo:e.TP_VEICULO,
     ValorNF:e.VALOR_NF, DataFormacao:e.DT_FORMACAO, DataEmissao:e.DT_EMISSAO_NF, Vendedor:e.NOME_VENDEDOR,
@@ -2857,7 +2896,7 @@ function exportCsv(){
 function exportPdf(){
   const rows = currentFiltered();
   if(!rows.length){ toast('Nada para exportar com o filtro atual'); return; }
-  const subtitulo = `Filial ${ENTREGAS[0]?ENTREGAS[0].FILIAL:''} · Gerado em ${fmtDate(REF_DATE)} · ${rows.length} carga(s) (dentro do filtro atual)`;
+  const subtitulo = `${rotuloOrigens(rows)} · Gerado em ${fmtDate(REF_DATE)} · ${rows.length} carga(s) (dentro do filtro atual)`;
   const pdfStr = buildTablePdf({title:'Relatório de Cargas na Rua', subtitle:subtitulo, columns:REPORT_COLUMNS, rows:rows.map(toReportRow)});
   downloadPdfString(pdfStr, `cargas_na_rua_${REF_DATE||'relatorio'}.pdf`);
   toast('PDF baixado com sucesso');
