@@ -3300,7 +3300,8 @@ function ocorrenciaEmailBody(e){
   return `${ocorrenciaGreeting()}\nSegue abaixo os dados da ocorrência:\n\n[Descreva aqui a ocorrência]\n\nRomaneio: ${e.NR_ROMANEIO}${e.VIAGEM?(`\nViagem: ${e.VIAGEM}`):''}\nNF: ${e.NR_NF}\nCliente: ${e.DS_CLIENTE}\nCNPJ: ${e.CNPJ}\nEndereço: ${e.CLIENTE_END}\nCidade/UF: ${e.CIDADE} / ${e.UF}\nMotorista: ${e.DS_MOTORISTA}\nTransportadora: ${e.DS_TRANSP}\nPlaca: ${e.PLACA}\nVeículo: ${e.TP_VEICULO}\nCond. Pagamento: ${e.COND_PGTO_CLIENTE}\nValor NF: ${BRL(e.VALOR_NF)}\nEmissão: ${fmtDate(e.DT_EMISSAO_NF)}\nVendedor: ${e.NOME_VENDEDOR}\n\nAtt,`;
 }
 function ocorrenciaSubject(e){
-  return `ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
+  const origem = origemDaCarga(e);
+  return `${origem?origem.toUpperCase()+' ':''}ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
 }
 function abrirOcorrenciaEmail(nf){
   const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
