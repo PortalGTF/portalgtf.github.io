@@ -1336,8 +1336,12 @@ function isAdminMode(){ return !!adminSenha; }
 let VENDEDORES_INFO = {};
 let OCORRENCIA_CC = [];
 // Destinatários e cópias fixos do e-mail de Abertura de Ocorrência (somam com o vendedor e com o CC da Página2)
-const OCORRENCIA_PARA_FIXOS = ['ocorrencia@gtf.com.br','comercial.varejo@gtf.com.br'];
-const OCORRENCIA_CC_FIXOS = ['adilson.marcal@gtf.com.br','marcia.paixao@gtf.com.br','thais.gomes@gtf.com.br','daniela.camargo@gtf.com.br'];
+const OCORRENCIA_PARA_FIXOS = [
+  'ocorrencia@gtf.com.br','comercial.varejo@gtf.com.br',
+  'rafael.gomes@gtf.com.br','leonardo.goncalves@gtf.com.br','miguel.trindade@gtf.com.br',
+  'adilson.marcal@gtf.com.br','marcia.paixao@gtf.com.br','leonardo.tortola@gtf.com.br'
+];
+const OCORRENCIA_CC_FIXOS = ['thais.gomes@gtf.com.br','daniela.camargo@gtf.com.br'];
 let _vendedorMatchCache = {};
 const VENDEDOR_MATCH_THRESHOLD = 0.70; // pelo menos 70% de semelhança pra aceitar como o mesmo vendedor
 
@@ -3303,14 +3307,16 @@ function abrirOcorrenciaEmail(nf){
   if(!e) return;
   const vendInfo = getVendedorInfo(e.NOME_VENDEDOR);
   const semEmailVendedor = !vendInfo || !vendInfo.email;
+  // compara pelo endereço em si (funciona também se na planilha vier "Nome <email>")
+  const chave = (x)=>{ const m = String(x||'').match(/[^\s<>;,]+@[^\s<>;,]+/); return (m?m[0]:String(x||'').trim()).toLowerCase(); };
   const unir = (...listas)=>{
     const vistos = new Set(), out = [];
-    listas.flat().forEach(x=>{ const m = String(x||'').trim(); if(!m) return; const k = m.toLowerCase(); if(!vistos.has(k)){ vistos.add(k); out.push(m); } });
+    listas.flat().forEach(x=>{ const m = String(x||'').trim(); if(!m) return; const k = chave(m); if(!vistos.has(k)){ vistos.add(k); out.push(m); } });
     return out;
   };
   const para = unir(OCORRENCIA_PARA_FIXOS, semEmailVendedor ? [] : [vendInfo.email]);
-  const paraChaves = new Set(para.map(x=>x.toLowerCase()));
-  const cc = unir(OCORRENCIA_CC, OCORRENCIA_CC_FIXOS).filter(x=>!paraChaves.has(x.toLowerCase()));
+  const paraChaves = new Set(para.map(chave));
+  const cc = unir(OCORRENCIA_CC, OCORRENCIA_CC_FIXOS).filter(x=>!paraChaves.has(chave(x)));
   if(semEmailVendedor) toast('Não encontrei o e-mail desse vendedor na Página2 — o e-mail abriu só com os destinatários fixos.');
   window.location.href = buildMailtoUrl(para, cc, ocorrenciaSubject(e), ocorrenciaEmailBody(e));
 }
