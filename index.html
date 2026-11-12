@@ -3301,7 +3301,7 @@ function ocorrenciaEmailBody(e){
 }
 function ocorrenciaSubject(e){
   const origem = origemDaCarga(e);
-  return `${origem?origem.toUpperCase()+' ':''}ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
+  return `${origem?'FILIAL '+origem.toUpperCase()+' - ':''}ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
 }
 function abrirOcorrenciaEmail(nf){
   const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
