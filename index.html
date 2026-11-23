@@ -1339,8 +1339,10 @@ let OCORRENCIA_CC = [];
 const OCORRENCIA_PARA_FIXOS = [
   'ocorrencia@gtf.com.br','comercial.varejo@gtf.com.br',
   'rafael.gomes@gtf.com.br','leonardo.goncalves@gtf.com.br','miguel.trindade@gtf.com.br',
-  'adilson.marcal@gtf.com.br','marcia.paixao@gtf.com.br','leonardo.tortola@gtf.com.br'
+  'leonardo.tortola@gtf.com.br','administrativo.queimados@gtf.com.br'
 ];
+// Endereços que não devem aparecer no e-mail de ocorrência (nem no Para, nem no CC vindo da Página2)
+const OCORRENCIA_EXCLUIR = ['adilson.marcal@gtf.com.br','marcia.paixao@gtf.com.br'];
 const OCORRENCIA_CC_FIXOS = ['thais.gomes@gtf.com.br','daniela.camargo@gtf.com.br','luiz.salmaso@gtf.com.br'];
 let _vendedorMatchCache = {};
 const VENDEDOR_MATCH_THRESHOLD = 0.70; // pelo menos 70% de semelhança pra aceitar como o mesmo vendedor
@@ -3315,9 +3317,10 @@ function abrirOcorrenciaEmail(nf){
     listas.flat().forEach(x=>{ const m = String(x||'').trim(); if(!m) return; const k = chave(m); if(!vistos.has(k)){ vistos.add(k); out.push(m); } });
     return out;
   };
-  const para = unir(OCORRENCIA_PARA_FIXOS, semEmailVendedor ? [] : [vendInfo.email]);
+  const excluir = new Set(OCORRENCIA_EXCLUIR.map(chave));
+  const para = unir(OCORRENCIA_PARA_FIXOS, semEmailVendedor ? [] : [vendInfo.email]).filter(x=>!excluir.has(chave(x)));
   const paraChaves = new Set(para.map(chave));
-  const cc = unir(OCORRENCIA_CC, OCORRENCIA_CC_FIXOS).filter(x=>!paraChaves.has(chave(x)));
+  const cc = unir(OCORRENCIA_CC, OCORRENCIA_CC_FIXOS).filter(x=>!paraChaves.has(chave(x)) && !excluir.has(chave(x)));
   if(semEmailVendedor) toast('Não encontrei o e-mail desse vendedor na Página2 — o e-mail abriu só com os destinatários fixos.');
   window.location.href = buildMailtoUrl(para, cc, ocorrenciaSubject(e), ocorrenciaEmailBody(e));
 }
