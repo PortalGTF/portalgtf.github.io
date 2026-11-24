@@ -697,6 +697,17 @@ html.dark .origem-ap{color:#7FB0FF;}
 }
 .delivery-card:active{background:var(--surface-2);}
 .delivery-card.dc-atrasada{background:color-mix(in srgb, var(--warn) 6%, var(--surface));border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);}
+tr.row-pend{background:color-mix(in srgb, var(--warn) 9%, var(--surface));}
+tr.row-pend td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--warn) 55%, transparent);}
+tr.row-ok{background:color-mix(in srgb, var(--ok) 9%, var(--surface));}
+tr.row-ok td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--ok) 55%, transparent);}
+table.data-table tbody tr.row-pend:hover{background:color-mix(in srgb, var(--warn) 14%, var(--surface));}
+table.data-table tbody tr.row-ok:hover{background:color-mix(in srgb, var(--ok) 14%, var(--surface));}
+.status-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:11.5px;color:var(--ink-600);margin:10px 0 0;padding:2px 2px;}
+.status-legend span.it{display:inline-flex;align-items:center;gap:6px;}
+.status-swatch{width:13px;height:13px;border-radius:4px;flex:0 0 auto;}
+.status-swatch.pend{background:color-mix(in srgb, var(--warn) 18%, var(--surface));border-left:3px solid color-mix(in srgb, var(--warn) 60%, transparent);}
+.status-swatch.ok{background:color-mix(in srgb, var(--ok) 18%, var(--surface));border-left:3px solid color-mix(in srgb, var(--ok) 60%, transparent);}
 tr.row-atrasada{background:color-mix(in srgb, var(--warn) 6%, var(--surface));}
 table.data-table tbody tr.row-atrasada:hover{background:color-mix(in srgb, var(--warn) 11%, var(--surface));}
 tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--warn) 55%, transparent);}
@@ -764,6 +775,8 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
   table.rtbl thead{display:none;}
   table.rtbl, table.rtbl tbody, table.rtbl tr, table.rtbl td{display:block;width:100%;}
   table.rtbl tr{margin-bottom:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);box-shadow:var(--shadow-sm);}
+  table.rtbl tr.row-pend{border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);background:color-mix(in srgb, var(--warn) 9%, var(--surface));}
+  table.rtbl tr.row-ok{border-left:3px solid color-mix(in srgb, var(--ok) 55%, transparent);background:color-mix(in srgb, var(--ok) 9%, var(--surface));}
   table.rtbl tr.row-atrasada{border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);}
   table.rtbl tr:last-child{margin-bottom:0;}
   table.rtbl td{
@@ -1798,6 +1811,10 @@ function joinComMais(arr, max=6){
   if(ordenado.length<=max) return ordenado.join(' · ');
   return ordenado.slice(0,max).join(' · ') + ` · +${ordenado.length-max} mais`;
 }
+function statusLegendMini(){
+  return `<div class="status-legend"><span class="it"><span class="status-swatch pend"></span>Laranja = entrega pendente</span><span class="it"><span class="status-swatch ok"></span>Verde = entrega realizada</span></div>`;
+}
+function rowStatusCls(e){ return e.STATUS_ENTREGA==='REALIZADO' ? 'row-ok' : 'row-pend'; }
 function atrasadaLegendMini(list){
   if(!list.some(isCargaAtrasada)) return '';
   return `<div class="atrasada-legend" style="display:flex;margin:10px 0 0;"><span class="atrasada-swatch"></span>Fundo destacado = carga formada em um dia anterior ao mais recente</div>`;
@@ -2448,9 +2465,9 @@ function renderVendedores(list){
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>Pedidos de ${state.vendedorSel}${vendedorWaBtn(state.vendedorSel, true)}</h3><div class="sub">${meus.length} pedidos no filtro atual</div></div>
     ${renderDetailSummaryHtml(stats)}
-    ${atrasadaLegendMini(meus)}
+    ${statusLegendMini()}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Motorista/Transp.</th><th>Valor</th></tr></thead>
-    <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Motorista/Transp.">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${meus.slice(0,60).map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${rowStatusCls(e)}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Motorista/Transp.">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)} · ${e.DS_TRANSP}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
   $$('#vendedorDetalhe tr[data-nf]').forEach(tr=> tr.addEventListener('click', ()=>openTimeline(tr.dataset.nf)));
 }
@@ -2509,9 +2526,9 @@ function renderRedes(list){
   det.innerHTML = `<div class="panel" style="margin-top:6px;">
     <div class="panel-head"><h3>${state.redeSel}</h3><div class="sub">${meus.length} pedidos · ${BRL(stats.valorTotal)} faturado · ${stats.cidadesArr.length} cidades</div></div>
     ${renderDetailSummaryHtml(stats)}
-    ${atrasadaLegendMini(meus)}
+    ${statusLegendMini()}
     <div class="table-scroll"><table class="data-table rtbl" style="min-width:0;"><thead><tr><th>Pedido</th><th>NF</th><th>Cliente</th><th>Endereço</th><th>Cidade</th><th>Transportadora</th><th>Motorista</th><th>Valor</th></tr></thead>
-    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${isCargaAtrasada(e)?'row-atrasada':''}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
+    <tbody>${meus.map(e=>`<tr data-nf="${e.NR_NF}" style="cursor:pointer;" class="${rowStatusCls(e)}"><td class="mono" data-label="Pedido">${e.PEDIDO}</td><td class="mono" data-label="NF">${e.NR_NF}</td><td data-label="Cliente">${e.DS_CLIENTE}</td><td data-label="Endereço" style="white-space:normal;max-width:200px;">${e.CLIENTE_END||'—'}</td><td data-label="Cidade">${e.CIDADE}/${e.UF}</td><td data-label="Transportadora">${e.DS_TRANSP}</td><td data-label="Motorista">${e.DS_MOTORISTA}${waBtn(e.TELEFONE_MOTORISTA, e.DS_MOTORISTA)}</td><td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
   $$('#redeDetalhe tr[data-nf]').forEach(tr=> tr.addEventListener('click', ()=>openTimeline(tr.dataset.nf)));
 }
