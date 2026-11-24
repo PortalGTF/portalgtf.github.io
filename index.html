@@ -697,6 +697,19 @@ html.dark .origem-ap{color:#7FB0FF;}
 }
 .delivery-card:active{background:var(--surface-2);}
 .delivery-card.dc-atrasada{background:color-mix(in srgb, var(--warn) 6%, var(--surface));border-left:3px solid color-mix(in srgb, var(--warn) 55%, transparent);}
+
+.oc-ov{position:fixed;inset:0;background:rgba(10,20,35,.55);z-index:400;display:flex;align-items:center;justify-content:center;padding:16px;}
+.oc-box{background:var(--surface);color:var(--ink-900);border-radius:16px;max-width:440px;width:100%;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.35);max-height:92vh;overflow:auto;}
+.oc-box h3{margin:0 0 4px;font-size:17px;}
+.oc-box p{margin:0 0 14px;font-size:13px;color:var(--ink-600);}
+.oc-box textarea{width:100%;min-height:78px;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:13px;background:var(--surface-2);color:var(--ink-900);resize:vertical;box-sizing:border-box;margin-bottom:12px;}
+.oc-opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:13px 14px;margin-bottom:9px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink-900);cursor:pointer;font:inherit;}
+.oc-opt:hover{background:var(--surface-2);}
+.oc-opt b{display:block;font-size:14px;}
+.oc-opt span.d{display:block;font-size:12px;color:var(--ink-600);margin-top:2px;}
+.oc-opt .ic{font-size:22px;flex:0 0 auto;}
+.oc-cancel{display:block;margin:4px auto 0;background:none;border:none;color:var(--ink-600);font:inherit;font-size:13px;cursor:pointer;padding:6px 10px;}
+.oc-prev{width:100%;border:1px solid var(--line);border-radius:10px;margin-bottom:12px;display:block;}
 tr.row-pend{background:color-mix(in srgb, var(--warn) 9%, var(--surface));}
 tr.row-pend td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--warn) 55%, transparent);}
 tr.row-ok{background:color-mix(in srgb, var(--ok) 9%, var(--surface));}
@@ -2178,7 +2191,7 @@ function openTimeline(nf){
         ${entregaBadge(e.STATUS_ENTREGA)}
         ${origemBadge(origemDaCarga(e))}
         <button type="button" class="btn btn-sm" id="shareCardBtn" onclick="shareCardImage('${e.NR_NF}')">📤 Compartilhar</button>
-        <button type="button" class="btn btn-sm" id="ocorrenciaBtn" onclick="abrirOcorrenciaEmail('${e.NR_NF}')">🚨 Abertura Oc.</button>
+        <button type="button" class="btn btn-sm" id="ocorrenciaBtn" onclick="escolherOcorrencia('${e.NR_NF}')">🚨 Abertura Oc.</button>
         ${isAdminMode()? `<button type="button" class="btn btn-sm ${e.STATUS_ENTREGA==='REALIZADO'?'':'btn-primary'}" onclick="marcarEntrega('${e.NR_NF}','${e.STATUS_ENTREGA==='REALIZADO'?'PENDENTE':'REALIZADO'}')">${e.STATUS_ENTREGA==='REALIZADO'? 'Desfazer, marcar como pendente' : '✓ Marcar como entregue'}</button>` : ''}
       </div>
     </div>
@@ -3345,6 +3358,133 @@ function abrirOcorrenciaEmail(nf){
   window.location.href = buildMailtoUrl(para, cc, ocorrenciaSubject(e), ocorrenciaEmailBody(e));
 }
 window.abrirOcorrenciaEmail = abrirOcorrenciaEmail;
+
+/* ============================================================
+   ABERTURA DE OCORRÊNCIA — escolha entre WhatsApp (imagem) e e-mail
+   ============================================================ */
+function buildOcorrenciaImage(e, descricao){
+  const W = 1080, PAD = 44, FB = 'Inter, Arial, sans-serif', FT = 'Sora, Inter, Arial, sans-serif';
+  const m = document.createElement('canvas').getContext('2d');
+  const origem = origemDaCarga(e);
+  const done = e.STATUS_ENTREGA==='REALIZADO';
+  const cmds = []; let y = 0;
+  const T = (x,yy,text,font,color)=>cmds.push({t:'text',x,y:yy,text,font,color});
+
+  // cabeçalho
+  const hdrH = 132;
+  cmds.push({t:'rect',x:0,y:0,w:W,h:hdrH,color:'#B91C1C'});
+  T(PAD,56,'ABERTURA DE OCORRÊNCIA',`800 36px ${FT}`,'#ffffff');
+  T(PAD,98,`${origem?('FILIAL '+origem.toUpperCase()+'  ·  '):''}NF ${e.NR_NF}  ·  Romaneio ${e.NR_ROMANEIO}${e.VIAGEM?('  ·  Viagem '+e.VIAGEM):''}`,`600 23px ${FB}`,'#FEE2E2');
+  y = hdrH + 38;
+
+  // cliente (nome completo, sem cortar)
+  m.font = `800 32px ${FT}`;
+  wrapCanvasText(m, e.DS_CLIENTE||'—', W-PAD*2).forEach(ln=>{ T(PAD,y,ln,m.font,'#0E1B2C'); y+=40; });
+  y += 2;
+  T(PAD,y,`Cód. ${e.CD_CLIENTE||'—'}   ·   CNPJ ${e.CNPJ||'—'}`,`600 22px ${FB}`,'#4B5A70'); y += 30;
+  m.font = `600 22px ${FB}`;
+  wrapCanvasText(m, `${e.CLIENTE_END||'—'} — ${e.CIDADE||''}/${e.UF||''}`, W-PAD*2).forEach(ln=>{ T(PAD,y,ln,m.font,'#4B5A70'); y+=30; });
+  y += 14;
+
+  // descrição da ocorrência
+  if(descricao && descricao.trim()){
+    m.font = `600 25px ${FB}`;
+    const lines = []; descricao.trim().split(/\n/).forEach(par=> wrapCanvasText(m, par||' ', W-PAD*2-48).forEach(l=>lines.push(l)));
+    const boxH = lines.length*34 + 70;
+    cmds.push({t:'box',x:PAD,y:y,w:W-PAD*2,h:boxH,bg:'#FEF2F2',bd:'#FCA5A5'});
+    T(PAD+24,y+36,'OCORRÊNCIA',`800 18px ${FB}`,'#B91C1C');
+    lines.forEach((ln,i)=>T(PAD+24,y+72+i*34,ln,m.font,'#7F1D1D'));
+    y += boxH + 44;
+  }
+
+  // grade de dados
+  const pairs = [
+    ['Pedido', e.PEDIDO], ['Valor da NF', BRL(e.VALOR_NF)],
+    ['Emissão', fmtDate(e.DT_EMISSAO_NF)], ['Status da entrega', done?'Entregue':'Pendente'],
+    ['Motorista', e.DS_MOTORISTA], ['Telefone motorista', e.TELEFONE_MOTORISTA||'—'],
+    ['Placa', e.PLACA], ['Veículo', e.TP_VEICULO],
+    ['Transportadora', e.DS_TRANSP], ['Vendedor', e.NOME_VENDEDOR],
+    ['Rede', e.REDE||'—'], ['Cond. pagamento', e.COND_PGTO_CLIENTE]
+  ];
+  const gap = 30, colW = (W-PAD*2-gap)/2;
+  for(let i=0;i<pairs.length;i+=2){
+    let maxL = 1; const rowY = y;
+    [pairs[i],pairs[i+1]].forEach((pr,ci)=>{
+      if(!pr) return;
+      const cx = PAD + ci*(colW+gap);
+      T(cx,rowY,String(pr[0]).toUpperCase(),`700 17px ${FB}`,'#8493A8');
+      m.font = `700 25px ${FB}`;
+      const ls = wrapCanvasText(m, String(pr[1]==null||pr[1]===''?'—':pr[1]), colW);
+      ls.forEach((ln,li)=>T(cx,rowY+30+li*30,ln,m.font,'#0E1B2C'));
+      maxL = Math.max(maxL, ls.length);
+    });
+    y = rowY + 30 + maxL*30 + 20;
+  }
+  y += 4;
+  T(PAD,y,'Portal de Cargas GTF · Monitoramento de Entregas · '+new Date().toLocaleString('pt-BR'),`500 17px ${FB}`,'#B3BECD');
+  y += 36;
+
+  const H = Math.ceil(y);
+  const c = document.createElement('canvas'); c.width = W*2; c.height = H*2;
+  const f = c.getContext('2d'); f.scale(2,2); f.textBaseline='alphabetic';
+  f.fillStyle='#ffffff'; f.fillRect(0,0,W,H);
+  cmds.forEach(k=>{
+    if(k.t==='rect'){ f.fillStyle=k.color; f.fillRect(k.x,k.y,k.w,k.h); }
+    else if(k.t==='box'){ roundRectPath(f,k.x,k.y,k.w,k.h,14); f.fillStyle=k.bg; f.fill(); f.strokeStyle=k.bd; f.lineWidth=2; f.stroke(); }
+    else { f.font=k.font; f.fillStyle=k.color; f.fillText(k.text,k.x,k.y); }
+  });
+  return new Promise(res=>c.toBlob(b=>res(b),'image/png'));
+}
+
+function fecharOcChoice(){ const o=document.getElementById('ocChoice'); if(o) o.remove(); }
+function escolherOcorrencia(nf){
+  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  if(!e) return;
+  fecharOcChoice();
+  const ov = document.createElement('div');
+  ov.className='oc-ov'; ov.id='ocChoice';
+  ov.innerHTML = `<div class="oc-box" role="dialog" aria-modal="true">
+    <h3>🚨 Abertura de ocorrência</h3>
+    <p>NF ${escapeHtml(String(e.NR_NF))} · ${escapeHtml(e.DS_CLIENTE||'')}</p>
+    <textarea id="ocDesc" placeholder="Descreva a ocorrência (aparece na imagem do WhatsApp — opcional)"></textarea>
+    <button type="button" class="oc-opt" id="ocWa"><span class="ic">💬</span><span><b>Enviar imagem no WhatsApp</b><span class="d">Gera uma imagem completa do cliente para postar no grupo</span></span></button>
+    <button type="button" class="oc-opt" id="ocMail"><span class="ic">✉️</span><span><b>Abrir e-mail de ocorrência</b><span class="d">Segue o fluxo de e-mail já configurado</span></span></button>
+    <button type="button" class="oc-cancel" id="ocCancel">Cancelar</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', ev=>{ if(ev.target===ov) fecharOcChoice(); });
+  ov.querySelector('#ocCancel').onclick = fecharOcChoice;
+  ov.querySelector('#ocMail').onclick = ()=>{ fecharOcChoice(); abrirOcorrenciaEmail(nf); };
+  ov.querySelector('#ocWa').onclick = async ()=>{
+    const desc = ov.querySelector('#ocDesc').value;
+    const btn = ov.querySelector('#ocWa'); btn.disabled = true;
+    try{
+      const blob = await buildOcorrenciaImage(e, desc);
+      const nome = `ocorrencia-NF${e.NR_NF}.png`;
+      fecharOcChoice();
+      await enviarImagemOcorrencia(blob, nome);
+    }catch(err){ console.error(err); toast('Não consegui gerar a imagem da ocorrência.'); btn.disabled=false; }
+  };
+}
+async function enviarImagemOcorrencia(blob, nome){
+  const file = new File([blob], nome, {type:'image/png'});
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:'Abertura de ocorrência'});
+      return;
+    }
+  }catch(err){ if(err && err.name==='AbortError') return; console.error(err); }
+  // computador: copia a imagem (Ctrl+V no grupo) e baixa uma cópia
+  let copiou = false;
+  try{
+    if(navigator.clipboard && window.ClipboardItem){ await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); copiou = true; }
+  }catch(err){ console.error(err); }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download=nome; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 300);
+  toast(copiou ? 'Imagem copiada e baixada — abra o grupo no WhatsApp e cole (Ctrl+V).' : 'Imagem baixada — anexe no grupo do WhatsApp.');
+}
+window.escolherOcorrencia = escolherOcorrencia;
 
 /* ============================================================
    19) ADMINISTRADOR — marcar entrega REALIZADO/PENDENTE
