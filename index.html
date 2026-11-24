@@ -1039,7 +1039,7 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
 
         <div class="grid-charts">
           <div class="panel"><div class="panel-head"><div><h3 id="hdrTranspChart">QTD DE NF POR TRANSPORTADOR</h3><div class="sub" id="subTranspChart"></div></div></div><div class="panel-body"><div class="chart-box"><div id="chartTransp" class="mini-chart"></div></div></div></div>
-          <div class="panel"><div class="panel-head"><h3>QUANTIDADE DE ENTREGAS POR MOTORISTA</h3></div><div class="panel-body"><div class="chart-box"><div id="chartMotorista" class="mini-chart"></div></div></div></div>
+          <div class="panel"><div class="panel-head"><h3>QUANTIDADE DE ENTREGAS POR MOTORISTA</h3><div class="sub">Clientes distintos por romaneio (várias NFs do mesmo cliente = 1 entrega)</div></div><div class="panel-body"><div class="chart-box"><div id="chartMotorista" class="mini-chart"></div></div></div></div>
           <div class="panel"><div class="panel-head"><h3>TOP 10 CIDADES ATENDIDAS - QTD. NF</h3></div><div class="panel-body"><div class="chart-box"><div id="chartCidade" class="mini-chart"></div></div></div></div>
           <div class="panel"><div class="panel-head"><div><h3 id="hdrVendedorChart">VALOR FISCAL DE VENDA POR VENDEDOR</h3><div class="sub" id="subVendedorChart"></div></div></div><div class="panel-body"><div class="chart-box"><div id="chartVendedor" class="mini-chart"></div></div></div></div>
         </div>
@@ -1738,14 +1738,17 @@ function renderCharts(list){
     miniBarChart('chartTransp', transp, {color:'#0C7C8C'});
   }
 
+  // Entrega = cliente/endereço visitado (várias NFs do mesmo cliente no mesmo romaneio contam como 1)
   const motMap = new Map();
   list.forEach(e=>{
     const k = e.DS_MOTORISTA || '—';
-    if(!motMap.has(k)) motMap.set(k, {count:0, placas:new Set()});
-    const m = motMap.get(k); m.count++; if(e.PLACA) m.placas.add(e.PLACA);
+    if(!motMap.has(k)) motMap.set(k, {entregas:new Set(), nfs:0, placas:new Set()});
+    const m = motMap.get(k);
+    m.entregas.add((e.CD_CLIENTE||e.CNPJ||e.DS_CLIENTE||'')+'|'+(e.NR_ROMANEIO||''));
+    m.nfs++; if(e.PLACA) m.placas.add(e.PLACA);
   });
-  const mot = Array.from(motMap.entries()).sort((a,b)=>b[1].count-a[1].count).slice(0,8)
-    .map(([k,v])=>[k, v.count, v.placas.size? ('Placa: '+Array.from(v.placas).join(', ')) : '']);
+  const mot = Array.from(motMap.entries()).sort((a,b)=>b[1].entregas.size-a[1].entregas.size || b[1].nfs-a[1].nfs).slice(0,8)
+    .map(([k,v])=>[k, v.entregas.size, `${v.nfs} NF${v.nfs>1?'s':''}`+(v.placas.size? (' · Placa: '+Array.from(v.placas).join(', ')) : '')]);
   miniBarChart('chartMotorista', mot, {color:'#4F46E5'});
 
   const cid = topEntries(list,'CIDADE',10);
