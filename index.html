@@ -710,6 +710,22 @@ html.dark .origem-ap{color:#7FB0FF;}
 .oc-opt .ic{font-size:22px;flex:0 0 auto;}
 .oc-cancel{display:block;margin:4px auto 0;background:none;border:none;color:var(--ink-600);font:inherit;font-size:13px;cursor:pointer;padding:6px 10px;}
 .oc-prev{width:100%;border:1px solid var(--line);border-radius:10px;margin-bottom:12px;display:block;}
+
+.base-flag{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;border-radius:10px;padding:8px 12px;margin:0 0 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink-600);}
+.base-flag .bf-dot{width:9px;height:9px;border-radius:50%;background:var(--ink-300);flex:0 0 auto;}
+.base-flag.ok{background:color-mix(in srgb, var(--ok) 9%, var(--surface));border-color:color-mix(in srgb, var(--ok) 35%, var(--line));color:var(--ink-900);}
+.base-flag.ok .bf-dot{background:var(--ok);}
+.base-flag.warn{background:color-mix(in srgb, var(--warn) 10%, var(--surface));border-color:color-mix(in srgb, var(--warn) 40%, var(--line));color:var(--ink-900);}
+.base-flag.warn .bf-dot{background:var(--warn);}
+.base-flag.err .bf-dot{background:var(--danger);}
+.base-flag small{font-weight:500;color:var(--ink-600);}
+#tblHist td{word-break:break-word;white-space:normal;}
+@media (max-width:760px){#tblHist{table-layout:auto !important;}}
+.hist-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;}
+.hist-chip{border:1px solid var(--line);background:var(--surface);color:var(--ink-900);border-radius:999px;padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
+.hist-chip small{color:var(--ink-600);font-weight:500;margin-left:4px;}
+.hist-chip.active{background:var(--brand);border-color:var(--brand);color:#fff;}
+.hist-chip.active small{color:rgba(255,255,255,.8);}
 tr.row-pend{background:color-mix(in srgb, var(--warn) 9%, var(--surface));}
 tr.row-pend td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(--warn) 55%, transparent);}
 tr.row-ok{background:color-mix(in srgb, var(--ok) 9%, var(--surface));}
@@ -959,6 +975,7 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
       <button class="nav-item" data-view="redes"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="6" cy="6" r="2.6" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="6" r="2.6" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="18" r="2.6" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 7.2 10.5 16M15.8 7.2 13.5 16M8.6 6h6.8" stroke="currentColor" stroke-width="1.7"/></svg>Redes<span class="cnt" id="cntRedes">0</span></button>
       <button class="nav-item" data-view="veiculos"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 16V6a1 1 0 0 1 1-1h9v11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M13 9h4l4 4v3h-8V9Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.6" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="17" r="1.6" stroke="currentColor" stroke-width="1.7"/></svg>Veículos<span class="cnt" id="cntVeiculos">0</span></button>
       <button class="nav-item" data-view="status"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M9 11.5 11 13.5 15.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/></svg>Status de Entregas</button>
+      <button class="nav-item" data-view="historico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Histórico (10 dias)</button>
 
       <div class="filters-wrap" id="filtersWrap">
         <div class="filters-head"><span>Filtros</span><button id="clearFiltersBtn">Limpar</button></div>
@@ -1026,6 +1043,8 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
     <main class="content">
 
       <!-- ===================== VISÃO GERAL ===================== -->
+            <div class="base-flag" id="baseFlag" style="display:none;"><span class="bf-dot"></span><span id="baseFlagText"></span></div>
+
       <section class="view active" id="view-visao">
         <div class="view-head">
           <div><h1>Visão geral da operação</h1><p id="visaoSub">Indicadores consolidados de todas as cargas faturadas dentro do filtro atual — visão comercial de onde está cada carga.</p></div>
@@ -1175,6 +1194,19 @@ tr.row-atrasada td:first-child{box-shadow:inset 3px 0 0 color-mix(in srgb, var(-
         </div>
         <div class="entity-grid" id="veiculoGrid"></div>
         <div id="veiculoDetalhe"></div>
+      </section>
+
+            <!-- ===================== HISTÓRICO ===================== -->
+      <section class="view" id="view-historico">
+        <div class="view-head">
+          <div><h1>Histórico de cargas</h1><p>Cargas dos últimos 10 dias, guardadas automaticamente. Use a busca do topo (NF, cliente, placa…) ou escolha o dia em que a carga entrou na planilha.</p></div>
+        </div>
+        <div class="hist-chips" id="histChips"></div>
+        <div class="panel">
+          <div class="panel-head"><h3 id="histTitulo">Cargas</h3><div class="sub" id="histSub"></div></div>
+          <div class="table-scroll"><table class="data-table rtbl" id="tblHist" style="min-width:0;table-layout:fixed;width:100%;"><thead><tr><th style="width:9%">Entrou em</th><th style="width:8%">NF</th><th style="width:15%">Romaneio / Viagem</th><th style="width:20%">Cliente</th><th style="width:11%">Cidade</th><th style="width:16%">Motorista / Placa</th><th style="width:10%">Valor</th><th style="width:11%">Entrega</th></tr></thead><tbody id="histBody"></tbody></table></div>
+          <div id="histLegend"></div>
+        </div>
       </section>
 
       <!-- ===================== STATUS DE ENTREGAS ===================== -->
@@ -1348,6 +1380,8 @@ function computeRefDate(list){
   return list.reduce((m,e)=> e.DT_FORMACAO>m? e.DT_FORMACAO:m, list[0]?list[0].DT_FORMACAO:'');
 }
 let REF_DATE = computeRefDate(ENTREGAS);
+let HIST = [];
+function findEntrega(nf){ const k=String(nf); return ENTREGAS.find(x=>String(x.NR_NF)===k) || HIST.find(x=>String(x.NR_NF)===k); }
 
 /* ---------------- 2) Estado global ---------------- */
 const state = {
@@ -2182,7 +2216,7 @@ function buildTimelineSteps(e){
   return steps;
 }
 function openTimeline(nf){
-  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  const e = findEntrega(nf);
   if(!e) return;
   const steps = buildTimelineSteps(e);
   const html = `
@@ -2196,7 +2230,7 @@ function openTimeline(nf){
         ${origemBadge(origemDaCarga(e))}
         <button type="button" class="btn btn-sm" id="shareCardBtn" onclick="shareCardImage('${e.NR_NF}')">📤 Compartilhar</button>
         <button type="button" class="btn btn-sm" id="ocorrenciaBtn" onclick="escolherOcorrencia('${e.NR_NF}')">🚨 Abertura Oc.</button>
-        ${isAdminMode()? `<button type="button" class="btn btn-sm ${e.STATUS_ENTREGA==='REALIZADO'?'':'btn-primary'}" onclick="marcarEntrega('${e.NR_NF}','${e.STATUS_ENTREGA==='REALIZADO'?'PENDENTE':'REALIZADO'}')">${e.STATUS_ENTREGA==='REALIZADO'? 'Desfazer, marcar como pendente' : '✓ Marcar como entregue'}</button>` : ''}
+        ${isAdminMode() && !e.HIST? `<button type="button" class="btn btn-sm ${e.STATUS_ENTREGA==='REALIZADO'?'':'btn-primary'}" onclick="marcarEntrega('${e.NR_NF}','${e.STATUS_ENTREGA==='REALIZADO'?'PENDENTE':'REALIZADO'}')">${e.STATUS_ENTREGA==='REALIZADO'? 'Desfazer, marcar como pendente' : '✓ Marcar como entregue'}</button>` : ''}
       </div>
     </div>
     <div class="modal-body">
@@ -2433,7 +2467,7 @@ async function deliverImage(blob, filename){
 }
 
 async function shareCardImage(nf){
-  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  const e = findEntrega(nf);
   if(!e) return;
   const btn = document.getElementById('shareCardBtn');
   const originalLabel = btn? btn.textContent : '';
@@ -2854,7 +2888,7 @@ $('#btnPdfRealizado').addEventListener('click', ()=> exportStatusPdf('REALIZADO'
 $('#btnPdfPendente').addEventListener('click', ()=> exportStatusPdf('PENDENTE'));
 
 /* ---------------- 15) Navegação de views ---------------- */
-const VIEW_LABELS = {visao:'Visão geral', entregas:'Cargas na rua', vendedores:'Vendedores', logistica:'Logística', redes:'Redes', veiculos:'Veículos', status:'Status de Entregas'};
+const VIEW_LABELS = {visao:'Visão geral', entregas:'Cargas na rua', vendedores:'Vendedores', logistica:'Logística', redes:'Redes', veiculos:'Veículos', status:'Status de Entregas', historico:'Histórico'};
 function setView(v, opts={}){
   if(!opts.keepBackContext) state.cameFromView = null;
   state.view = v; state.page=1;
@@ -2970,6 +3004,7 @@ function render(){
   else if(state.view==='redes'){ renderRedes(filtered); }
   else if(state.view==='veiculos'){ renderVeiculos(filtered); }
   else if(state.view==='status'){ renderStatusView(filtered); }
+  else if(state.view==='historico'){ renderHistorico(); }
 }
 
 // Lembra o vendedor selecionado entre uma visita e outra — assim ele não precisa escolher o nome toda vez
@@ -3209,6 +3244,7 @@ async function syncFromGoogleSheets(manual){
     lastSyncTime = new Date();
     updateSyncBadge(`Sincronizado ${timeAgo(lastSyncTime)}${lastSyncResumo}`, lastSyncResumo.includes('⚠')?'error':'ok');
     sincronizarStatusAoVivo();
+    if(typeof loadMetaBase==='function') loadMetaBase();
     if(manual) toast(`Planilha sincronizada: ${ENTREGAS.length} notas fiscais carregadas`);
   } catch(err){
     console.error('Falha ao sincronizar com Google Sheets:', err);
@@ -3343,7 +3379,7 @@ function ocorrenciaSubject(e){
   return `${origem?'FILIAL '+origem.toUpperCase()+' - ':''}ABERTURA DE OCORRÊNCIA - NF: ${e.NR_NF} - ROMANEIO: ${e.NR_ROMANEIO} - CLIENTE: ${e.CD_CLIENTE} ${e.DS_CLIENTE}`;
 }
 function abrirOcorrenciaEmail(nf){
-  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  const e = findEntrega(nf);
   if(!e) return;
   const vendInfo = getVendedorInfo(e.NOME_VENDEDOR);
   const semEmailVendedor = !vendInfo || !vendInfo.email;
@@ -3442,7 +3478,7 @@ function buildOcorrenciaImage(e, descricao){
 
 function fecharOcChoice(){ const o=document.getElementById('ocChoice'); if(o) o.remove(); }
 function escolherOcorrencia(nf){
-  const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+  const e = findEntrega(nf);
   if(!e) return;
   fecharOcChoice();
   const ov = document.createElement('div');
@@ -3536,6 +3572,129 @@ async function sincronizarStatusAoVivo(){
   }
 }
 
+
+/* ============================================================
+   HISTÓRICO (10 dias) + FLAG DA BASE DO DIA
+   ============================================================
+   O Apps Script copia a Página1 para a aba "Historico" a cada hora
+   (ações "historico" e "meta"). Aqui só lemos o resultado.
+   ============================================================ */
+let HIST_META = null, histLoadedAt = 0, histLoading = false, histErro = '';
+const HIST_TTL_MS = 5*60*1000;
+state.histDia = 'todos';
+
+function hojeLocalStr(){
+  const d = new Date(); const p = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function hhmm(iso){
+  const d = new Date(iso); if(isNaN(d)) return '—';
+  return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function renderBaseFlag(){
+  const el = $('#baseFlag'); const tx = $('#baseFlagText');
+  if(!el || !tx) return;
+  el.style.display = 'flex';
+  el.className = 'base-flag';
+  const m = HIST_META;
+  if(!m || !m.ultimaExecucao){
+    el.classList.add('err');
+    tx.innerHTML = 'Histórico ainda não ativado no Apps Script <small>(rode instalarGatilho uma vez)</small>';
+    return;
+  }
+  const idadeH = (Date.now() - new Date(m.ultimaExecucao).getTime())/3600000;
+  if(idadeH > 1){
+    el.classList.add('warn');
+    tx.innerHTML = `Histórico sem atualizar desde ${hhmm(m.ultimaExecucao)} <small>· ${fmtDate((m.ultimaExecucao||'').slice(0,10))}</small>`;
+    return;
+  }
+  if((m.novasHoje||0) > 0 && m.dia === hojeLocalStr()){
+    el.classList.add('ok');
+    tx.innerHTML = `Base de hoje (${fmtDate(m.dia)}) carregada · ${NUM(m.novasHoje)} NF${m.novasHoje>1?'s':''} novas hoje <small>· verificado às ${hhmm(m.ultimaExecucao)}</small>`;
+  } else {
+    el.classList.add('warn');
+    tx.innerHTML = `Ainda sem cargas novas hoje (${fmtDate(hojeLocalStr())}) <small>· última carga nova: ${m.ultimoDiaComCarga?fmtDate(m.ultimoDiaComCarga):'—'} · verificado às ${hhmm(m.ultimaExecucao)}</small>`;
+  }
+}
+async function loadMetaBase(){
+  try{
+    const r = await callAppsScript({action:'meta'});
+    if(!r || !r.ok) throw new Error((r&&r.error)||'resposta inválida');
+    HIST_META = r.meta || {};
+    if(HIST_META.dia === undefined && r.hoje) HIST_META.dia = r.hoje;
+  }catch(err){
+    console.warn('Meta da base indisponível:', err);
+    HIST_META = null;
+  }
+  renderBaseFlag();
+}
+async function loadHistorico(force){
+  if(histLoading) return;
+  if(!force && histLoadedAt && Date.now()-histLoadedAt < HIST_TTL_MS) return;
+  histLoading = true; histErro = '';
+  if(state.view==='historico') renderHistorico();
+  try{
+    const r = await callAppsScript({action:'historico'});
+    if(!r || !r.ok || !r.headers || !r.rows) throw new Error((r&&r.error)||'resposta inválida (o Apps Script foi reimplantado com a ação "historico"?)');
+    const headers = r.headers.map(h=>String(h).trim());
+    const priIdx = headers.indexOf('PRIMEIRO_DIA'), diaIdx = headers.indexOf('DIA_BASE');
+    const raw = [], meta = new Map();
+    r.rows.forEach(row=>{
+      if(!row.some(c=>c && String(c).trim()!=='')) return;
+      const o = {}; headers.forEach((h,i)=> o[h] = row[i]!==undefined? row[i] : '');
+      const rr = mapCsvRowToRaw(o);
+      if(!rr.NR_NF) return;
+      raw.push(rr);
+      if(!meta.has(rr.NR_NF)) meta.set(rr.NR_NF, {pri: priIdx>=0? String(row[priIdx]||'').slice(0,10):'', dia: diaIdx>=0? String(row[diaIdx]||'').slice(0,10):''});
+    });
+    HIST = buildEntregas(raw);
+    HIST.forEach(e=>{ const m = meta.get(e.NR_NF)||{}; e.PRIMEIRO_DIA = m.pri||''; e.DIA_BASE = m.dia||''; e.HIST = true; });
+    histLoadedAt = Date.now();
+  }catch(err){
+    console.error('Falha ao carregar histórico:', err);
+    histErro = String(err.message||err);
+  }finally{
+    histLoading = false;
+    if(state.view==='historico') renderHistorico();
+  }
+}
+function renderHistorico(){
+  if(!histLoadedAt && !histLoading && !histErro) loadHistorico();
+  else if(histLoadedAt && Date.now()-histLoadedAt > HIST_TTL_MS && !histLoading) loadHistorico();
+  const chips = $('#histChips'), body = $('#histBody'), sub = $('#histSub'), titulo = $('#histTitulo');
+  if(!chips || !body) return;
+  if(histLoading && !HIST.length){ chips.innerHTML=''; body.innerHTML = '<tr><td colspan="8" style="padding:20px;">Carregando histórico…</td></tr>'; sub.textContent=''; return; }
+  if(histErro && !HIST.length){ chips.innerHTML=''; body.innerHTML = `<tr><td colspan="8" style="padding:20px;">Não consegui carregar o histórico: ${escapeHtml(histErro)}</td></tr>`; sub.textContent=''; return; }
+  // chips por dia
+  const porDia = new Map();
+  HIST.forEach(e=>{ const d = e.PRIMEIRO_DIA||'—'; porDia.set(d,(porDia.get(d)||0)+1); });
+  const dias = Array.from(porDia.keys()).sort().reverse();
+  if(state.histDia!=='todos' && !porDia.has(state.histDia)) state.histDia='todos';
+  const hoje = hojeLocalStr();
+  chips.innerHTML = `<button type="button" class="hist-chip ${state.histDia==='todos'?'active':''}" data-d="todos">Todos os dias<small>${NUM(HIST.length)}</small></button>` +
+    dias.map(d=>`<button type="button" class="hist-chip ${state.histDia===d?'active':''}" data-d="${d}">${d===hoje?'Hoje · ':''}${d==='—'?'—':fmtDate(d).slice(0,5)}<small>${NUM(porDia.get(d))}</small></button>`).join('');
+  $$('#histChips .hist-chip').forEach(b=> b.addEventListener('click', ()=>{ state.histDia=b.dataset.d; renderHistorico(); }));
+  let lista = HIST.filter(e=> (state.histDia==='todos' || e.PRIMEIRO_DIA===state.histDia) && matchesSearch(e, state.search));
+  lista = lista.slice().sort((a,b)=> String(b.PRIMEIRO_DIA).localeCompare(String(a.PRIMEIRO_DIA)) || String(b.NR_NF).localeCompare(String(a.NR_NF)));
+  const MAX = 300;
+  titulo.textContent = state.histDia==='todos' ? 'Todas as cargas guardadas' : `Cargas que entraram em ${fmtDate(state.histDia)}`;
+  const ent = lista.filter(e=>e.STATUS_ENTREGA==='REALIZADO').length;
+  sub.textContent = `${NUM(lista.length)} NF${lista.length===1?'':'s'} · ${NUM(ent)} entregue${ent===1?'':'s'} · ${NUM(lista.length-ent)} pendente${lista.length-ent===1?'':'s'}${lista.length>MAX?` · mostrando as ${MAX} primeiras (refine pela busca)`:''}`;
+  if(!lista.length){ body.innerHTML = '<tr><td colspan="8" style="padding:20px;">Nenhuma carga encontrada com esse filtro/busca.</td></tr>'; $('#histLegend').innerHTML=''; return; }
+  body.innerHTML = lista.slice(0,MAX).map(e=>`<tr data-nf="${escapeHtml(String(e.NR_NF))}" style="cursor:pointer;" class="${rowStatusCls(e)}">
+    <td data-label="Entrou em">${e.PRIMEIRO_DIA?fmtDate(e.PRIMEIRO_DIA):'—'}</td>
+    <td class="mono" data-label="NF">${escapeHtml(String(e.NR_NF))}</td>
+    <td class="mono" data-label="Romaneio / Viagem">${escapeHtml(String(e.NR_ROMANEIO||'—'))}${e.VIAGEM?` · ${escapeHtml(String(e.VIAGEM))}`:''}</td>
+    <td data-label="Cliente">${escapeHtml(e.DS_CLIENTE||'')}</td>
+    <td data-label="Cidade">${escapeHtml(e.CIDADE||'')}/${escapeHtml(e.UF||'')}</td>
+    <td data-label="Motorista / Placa">${escapeHtml(e.DS_MOTORISTA||'')} · ${escapeHtml(e.PLACA||'')}</td>
+    <td class="strong" data-label="Valor">${BRL(e.VALOR_NF)}</td>
+    <td data-label="Entrega">${entregaBadge(e.STATUS_ENTREGA)}</td></tr>`).join('');
+  $$('#histBody tr[data-nf]').forEach(tr=> tr.addEventListener('click', ()=>openTimeline(tr.dataset.nf)));
+  $('#histLegend').innerHTML = statusLegendMini();
+}
+loadMetaBase();
+
 function setAdminUI(){
   const btn = $('#adminBtn');
   if(!btn) return;
@@ -3604,7 +3763,7 @@ async function marcarEntrega(nf, novoStatus){
   try{
     const r = await callAppsScript({action:'marcar', nf:String(nf), status:novoStatus, senha:adminSenha});
     if(r.ok){
-      const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+      const e = findEntrega(nf);
       if(e) e.STATUS_ENTREGA = r.status;
       registrarMarcacaoLocal(nf, r.status);
       toast(novoStatus==='REALIZADO'? 'Entrega marcada como realizada' : 'Entrega marcada como pendente');
@@ -3639,7 +3798,7 @@ async function marcarEntregaLote(nfs, novoStatus, btnSelector){
     try{
       const r = await callAppsScript({action:'marcar', nf:String(nf), status:novoStatus, senha:adminSenha});
       if(r.ok){
-        const e = ENTREGAS.find(x=>String(x.NR_NF)===String(nf));
+        const e = findEntrega(nf);
         if(e) e.STATUS_ENTREGA = r.status;
       registrarMarcacaoLocal(nf, r.status);
         ok++;
